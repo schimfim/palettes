@@ -16,16 +16,12 @@ def edist(a, b):
 def fshift(color, protov, distv):	
 	n = len(protov)
 	f = [(cos((d**focus)*pi)/2+0.5)**slope for d in distv]
-	fs = sum(f)
-	if stats:
-		mf = sum(f)/len(f)
-		s = (mf,mf,mf)
-		return s
+	# alt.: 1-1/(1+exp(-(x-1/fcs)*slp))
 	'''
 	cols = [[color[i]*(1-fc/n)*xf+proto[i]*fc/n for i in [0,1,2]] for (fc, proto) in zip(f, protov)]
 	avg = reduce(sum_rgb, cols)
 	'''
-	cols = [[color[i]*(1-fc/fs)/n*xf+proto[i]*fc/fs for i in [0,1,2]] for (fc, proto) in zip(f, protov)]
+	cols = [[color[i]*(1-fc)/n*xf+ proto[i]*fc for i in [0,1,2]] for (fc, proto) in zip(f, protov)]
 	avg = reduce(sum_rgb, cols)
 
 	return avg
@@ -47,6 +43,7 @@ def fshift2(color, protov, distv):
 	return avg
 
 def xform(c):
+	global cdist
 	# convert to float(0..1)
 	v = (c[0]/255.0, c[1]/255.0, c[2]/255.0)
 	
@@ -54,14 +51,21 @@ def xform(c):
 	dist = [0.0]*len(ppal)
 	for i, prot in enumerate(ppal):
 		dist[i] = edist(v, prot)
+		if not stats: continue
+		mdist[i] += dist[i]
+		for j,lim in enumerate([0.1, 0.2, 0.3, 0.4, 0.5]):
+			if dist[i] <= lim:
+				cdist[j] += 1.0 / len(ppal)
+				continue
 	
 	# shift color
-	s = fshift2(v, ppal, dist)
+	s = fshift(v, ppal, dist)
 	
 	# convert to int(0..255)
 	v = (int(s[0]*255.0), int(s[1]*255.0), int(s[2]*255.0))
 	return v
 
+mdist = [] # stats
 def adapt(img, pal, slp, foc):
 	newi = img.copy()
 	idata = newi.getdata()
@@ -69,6 +73,9 @@ def adapt(img, pal, slp, foc):
 	ppal = pal
 	slope = slp
 	focus = foc
+	global mdist, cdist
+	mdist = [0.0]*len(ppal)
+	cdist = [0.0]*5
 	# TODO: use logger
 	print 'processing...'
 	tic = time()
@@ -77,6 +84,11 @@ def adapt(img, pal, slp, foc):
 	dt = toc-tic
 	print '...done in', dt, 'secs'
 	newi.putdata(i2)
+	if stats:
+		mdist = [sd / len(idata) for sd in mdist]
+		cdist = [sd / len(idata) for sd in cdist]
+		print 'mdist:', mdist
+		print 'cdist:', cdist
 	return newi
 
 #
