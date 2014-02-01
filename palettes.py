@@ -1,6 +1,6 @@
 import Image
 import ImageDraw
-from math import sqrt, exp, cos, pi
+from math import sqrt, exp, cos, pi, log
 from time import time
 
 # module config
@@ -17,10 +17,7 @@ def fshift(color, protov, distv):
 	n = len(protov)
 	f = [(cos((d**focus)*pi)/2+0.5)**slope for d in distv]
 	# alt.: 1-1/(1+exp(-(x-1/fcs)*slp))
-	'''
-	cols = [[color[i]*(1-fc/n)*xf+proto[i]*fc/n for i in [0,1,2]] for (fc, proto) in zip(f, protov)]
-	avg = reduce(sum_rgb, cols)
-	'''
+
 	cols = [[color[i]*(1-fc)/n*xf+ proto[i]*fc for i in [0,1,2]] for (fc, proto) in zip(f, protov)]
 	avg = reduce(sum_rgb, cols)
 
@@ -53,10 +50,6 @@ def xform(c):
 		dist[i] = edist(v, prot)
 		if not stats: continue
 		mdist[i] += dist[i]
-		for j,lim in enumerate([0.1, 0.2, 0.3, 0.4, 0.5]):
-			if dist[i] <= lim:
-				cdist[j] += 1.0 / len(ppal)
-				continue
 	
 	# shift color
 	s = fshift(v, ppal, dist)
@@ -73,9 +66,8 @@ def adapt(img, pal, slp, foc):
 	ppal = pal
 	slope = slp
 	focus = foc
-	global mdist, cdist
+	global mdist
 	mdist = [0.0]*len(ppal)
-	cdist = [0.0]*5
 	# TODO: use logger
 	print 'processing...'
 	tic = time()
@@ -86,36 +78,35 @@ def adapt(img, pal, slp, foc):
 	newi.putdata(i2)
 	if stats:
 		mdist = [sd / len(idata) for sd in mdist]
-		cdist = [sd / len(idata) for sd in cdist]
 		print 'mdist:', mdist
-		print 'cdist:', cdist
 	return newi
 
 #
 # image analysis
-def nlyze(c):
-	# convert to float(0..1)
-	v = (c[0]/255.0, c[1]/255.0, c[2]/255.0)
-	
-	dist = [0.0]*len(ppal)
-	for i, prot in enumerate(ppal):
-		dist[i] = edist(v, prot)
-		...
-	
-	# convert to int(0..255)
-	v = (int(s[0]*255.0), int(s[1]*255.0), int(s[2]*255.0))
-	return v
 
-def analyse(img, pal, slp, foc):
+from random import sample
+def analyse(img, pal, k=1000):
 	idata = img.getdata()
+	smp = sample(idata, k)
 	print 'processing...'
 	tic = time()
-	i2 = map(nlyze, idata)
+
+	d = []
+	for c in smp:
+		# convert to float(0..1)
+		v = (c[0]/255.0, c[1]/255.0, c[2]/255.0)
+		for p in pal:
+			# calc distance
+			dist = edist(v, p)
+			d.append(dist)
+	d = sorted(d)
 	toc = time()
 	dt = toc-tic
 	print '...done in', dt, 'secs'
-	
-	return newi
+	perc = d[k/10]
+	focus = -2.1356/log(perc)
+	print 'perc={}, focus={}'.format(perc, focus)
+	return focus
 
 #
 # palette calculation
