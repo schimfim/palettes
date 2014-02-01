@@ -92,6 +92,32 @@ def adapt(img, pal, slp, foc):
 	return newi
 
 #
+# image analysis
+def nlyze(c):
+	# convert to float(0..1)
+	v = (c[0]/255.0, c[1]/255.0, c[2]/255.0)
+	
+	dist = [0.0]*len(ppal)
+	for i, prot in enumerate(ppal):
+		dist[i] = edist(v, prot)
+		...
+	
+	# convert to int(0..255)
+	v = (int(s[0]*255.0), int(s[1]*255.0), int(s[2]*255.0))
+	return v
+
+def analyse(img, pal, slp, foc):
+	idata = img.getdata()
+	print 'processing...'
+	tic = time()
+	i2 = map(nlyze, idata)
+	toc = time()
+	dt = toc-tic
+	print '...done in', dt, 'secs'
+	
+	return newi
+
+#
 # palette calculation
 
 def calc_palette(img, ncol=8):
