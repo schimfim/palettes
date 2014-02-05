@@ -14,9 +14,17 @@ def sum_rgb(a,b):
 def edist(a, b):
 	return sqrt(sum([(x[0]-x[1])**2 for x in zip(a,b)])/len(a))
 
+def memb(d,fc,slope):
+	# membership function
+	f = (cos((d**fc)*pi)/2+0.5)**slope
+	#f = exp(cos(d)*fc)/exp(fc)
+	#dfc = d**fc
+	#f = ((2.0*(dfc-1)-2.0)*dfc+2.0)*(dfc+0.5)
+	return f
+
 def fshift(color, protov, distv):	
 	n = len(protov)
-	f = [(cos((d**fc)*pi)/2+0.5)**slope for (d, fc) in zip(distv,focus)]
+	f = [memb(d,fc,slope) for (d, fc) in zip(distv,focus)]
 	# logistic function:
 	#f = [1-1/(1+exp(-(d-1/focus)*slope)) for d in distv]
 
@@ -141,7 +149,7 @@ def load(filename, size=(256,256)):
 	return img
 
 import glob, os
-def load_all(path, size=(256,256)):
+def load_all(path, size=(128,128)):
 	imgs = []
 	for infile in glob.glob(path + "/*.jpg"):
 		imgs.append(load(infile, size))
