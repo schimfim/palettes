@@ -7,9 +7,17 @@ from time import time
 stats = False  
 xf = 1.0
 defcol = (0.0, 0.0, 0.0)
+normalize = False 
 
 def sum_rgb(a,b):
 	return (a[0]+b[0],a[1]+b[1],a[2]+b[2])
+
+def norm(v):
+	length = sqrt(sum([a**2 for a in v]))
+	if length==0.0: length = 0.001
+	vn = [a/length for a in v]
+	# tuple(vn)?
+	return (vn, length)
 
 def edist(a, b):
 	return sqrt(sum([(x[0]-x[1])**2 for x in zip(a,b)])/len(a))
@@ -57,7 +65,9 @@ def fshift2(color, protov, distv):
 def xform(c):
 	# convert to float(0..1)
 	v = (c[0]/255.0, c[1]/255.0, c[2]/255.0)
-	
+	if normalize:
+		(v,lv) = norm(v)
+
 	# calc memberships
 	dist = [0.0]*len(ppal)
 	for i, prot in enumerate(ppal):
@@ -67,6 +77,9 @@ def xform(c):
 	
 	# shift color
 	s = fshift(v, ppal, dist)
+	if normalize:
+		# denormalize
+		s = [sn*lv for sn in s]
 	
 	# convert to int(0..255)
 	v = (int(s[0]*255.0), int(s[1]*255.0), int(s[2]*255.0))
@@ -83,6 +96,11 @@ def adapt(img, pal, slp, foc):
 	global mdist, mmemb
 	mdist = [0.0]*len(ppal)
 	mmemb = [0.0]*len(ppal)
+	
+	# normalize palette
+	if normalize:
+		ppal = [norm(p)[0] for p in pal]
+	
 	# TODO: use logger
 	print 'processing...'
 	tic = time()
@@ -108,12 +126,17 @@ def analyse(img, pal, gain=0.5, k=1000, nperc=0.1):
 	print 'analysing...'
 	tic = time()
 
+	# normalize palette
+	if normalize:
+		pal = [norm(p)[0] for p in pal]
+
 	d = []
 	empty = []
 	d = [empty[:] for i in pal]
 	for c in smp:
 		# convert to float(0..1)
 		v = (c[0]/255.0, c[1]/255.0, c[2]/255.0)
+		if normalize: (v,lv) = norm(v)
 		for i,p in enumerate(pal):
 			# calc distance
 			dist = edist(v, p)
@@ -169,14 +192,15 @@ def draw_palette(pals):
 	   or: draw_palette(*pals)
 	Returns Image
 	"""
-	h = 50
+	h = 20
+	width = 64
 	vals = pals.values()
 	names = pals.keys()
-	img = Image.new('RGB', (256,h*len(vals)))
+	img = Image.new('RGB', (width, h*len(vals)))
 	drw = ImageDraw.Draw(img)
 	for p in range(len(vals)):
 		cols = len(vals[p])
-		w = 256 / cols
+		w = width / cols
 		for i in range(cols):
 			x = i * w
 			y = p * h
@@ -184,6 +208,18 @@ def draw_palette(pals):
 			col = (int(pal[0]*255.0), int(pal[1]*255.0), int(pal[2]*255.0))
 			drw.rectangle([(x,y),(x+w,y+h)], fill=col)
 			drw.text((0,y), names[p])
-	img.show()
+	#img.show()
 	return img
 
+def add_palette(img, pal_img):
+	img.paste(pal_img, (256-64,256-20))
+
+def add_caption(img, text1, text2):
+	height = 20
+	width = 256-64
+	box = Image.new('RGB', (width, height))
+	drw = ImageDraw.Draw(box)
+	drw.rectangle([(0,0),(width,height)], fill='white')
+	drw.text((0,0), text1, fill='black')
+	drw.text((0,height/2), text2, fill='black')
+	img.paste(box, (0,256-height))
