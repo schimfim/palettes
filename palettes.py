@@ -178,9 +178,9 @@ def load_all(path, size=(128,128)):
 		imgs.append(load(infile, size))
 	return imgs
 
-def save_all(imgs, path):
+def save_all(imgs, path, pat):
 	for i,img in enumerate(imgs):
-		fname = path + "/img_" + str(i) + ".jpg"
+		fname = path + "/" + pat + str(i) + ".jpg"
 		img.save(fname, 'JPEG')
 		
 def draw_palette(pals):
