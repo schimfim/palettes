@@ -7,7 +7,8 @@ from time import time
 stats = False  
 xf = 1.0
 defcol = (0.0, 0.0, 0.0)
-normalize = False 
+normalize = False
+thumbnail = True
 
 def sum_rgb(a,b):
 	return (a[0]+b[0],a[1]+b[1],a[2]+b[2])
@@ -78,8 +79,10 @@ def xform(c):
 	# shift color
 	s = fshift(v, ppal, dist)
 	if normalize:
+		#(sx,ls) = norm(s) correct but same as no norm...
+		ls = 1.0
 		# denormalize
-		s = [sn*lv for sn in s]
+		s = [sn*lv/ls for sn in s]
 	
 	# convert to int(0..255)
 	v = (int(s[0]*255.0), int(s[1]*255.0), int(s[2]*255.0))
@@ -120,10 +123,12 @@ def adapt(img, pal, slp, foc):
 # image analysis
 
 from random import sample
-def analyse(img, pal, gain=0.5, k=1000, nperc=0.1):
+def analyse(img, pal, gain=0.5, k=0, nperc=0.1):
 	idata = img.getdata()
+	if k == 0:
+		k = len(idata) / 10
 	smp = sample(idata, k)
-	print 'analysing...'
+	print 'analysing...', '(k=)', k
 	tic = time()
 
 	# normalize palette
@@ -168,13 +173,14 @@ def calc_palette(img, ncol=8):
 
 def load(filename, size=(256,256)):
 	img = Image.open(filename)
-	img.thumbnail(size, Image.ANTIALIAS)
+	if thumbnail:
+		img.thumbnail(size, Image.ANTIALIAS)
 	return img
 
 import glob, os
 def load_all(path, size=(128,128)):
 	imgs = []
-	for infile in glob.glob(path + "/*.jpg"):
+	for infile in glob.glob(path + "/*.JPG"):
 		imgs.append(load(infile, size))
 	return imgs
 
@@ -212,7 +218,7 @@ def draw_palette(pals):
 	return img
 
 def add_palette(img, pal_img):
-	img.paste(pal_img, (256-64,256-20))
+	img.paste(pal_img, (256-64,0))
 
 def add_caption(img, text1, text2):
 	height = 20
@@ -222,4 +228,4 @@ def add_caption(img, text1, text2):
 	drw.rectangle([(0,0),(width,height)], fill='white')
 	drw.text((0,0), text1, fill='black')
 	drw.text((0,height/2), text2, fill='black')
-	img.paste(box, (0,256-height))
+	img.paste(box, (0,0))
