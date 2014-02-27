@@ -22,7 +22,7 @@ def norm(v):
 
 def edist(a, b):
 	return sqrt(sum([(x[0]-x[1])**2 for x in zip(a,b)])/len(a))
-
+	
 def memb(d,fc,slope):
 	# membership function
 	f = (cos((d**fc)*pi)/2+0.5)**slope
@@ -32,8 +32,9 @@ def memb(d,fc,slope):
 	return f
 
 def fshift(color, protov, distv):	
-	n = len(protov)
+	#n = len(protov)
 	f = [memb(d,fc,slope) for (d, fc) in zip(distv,focus)]
+	n = sum([1-x for x in f])
 	# logistic function:
 	#f = [1-1/(1+exp(-(d-1/focus)*slope)) for d in distv]
 
@@ -120,6 +121,10 @@ def adapt(img, pal, slp, foc):
 	return newi
 
 #
+# distances
+
+
+#
 # image analysis
 
 from random import sample
@@ -180,7 +185,7 @@ def load(filename, size=(256,256)):
 import glob, os
 def load_all(path, size=(128,128)):
 	imgs = []
-	for infile in glob.glob(path + "/*.JPG"):
+	for infile in glob.glob(path + "/*"):
 		imgs.append(load(infile, size))
 	return imgs
 
