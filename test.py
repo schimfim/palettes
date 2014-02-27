@@ -7,17 +7,15 @@ import time
 slope = 20.0 # small=large impact
 palettes.xf = 1.0
 palettes.defcol = (0.0,0.0,0.0)
-gain=0.5
-nperc=0.05
 palettes.normalize = True
 
 # config
 palettes.stats = False
 palettes.thumbnail = True
-size = (512,512)
+size = (256,256)
 
 imgs = palettes.load_all('orig',size)
-#imgs = [imgs[16]]
+imgs = [imgs[1]]
 pnam = 'bunt'
 ps = pals[pnam]
 pal_img = palettes.draw_palette({pnam:ps})
@@ -25,7 +23,7 @@ out = None
 
 start_time = time.strftime('%Y-%m-%d_%H:%M')
 prefix = ''
-folder = 'out_bunt0_norm'
+folder = 'out'
 fname_base = prefix + 'img_{}_{}_'.format(start_time, pnam)
 
 def start():
