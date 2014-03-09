@@ -1,5 +1,7 @@
 from colorsys import rgb_to_hsv, hsv_to_rgb
 from math import fmod, cos, pi
+from pals import pals
+from time import time
 
 def rgb2hsv(data):
 	'''
@@ -8,6 +10,17 @@ def rgb2hsv(data):
 	'''
 	hsv = [rgb_to_hsv(r/255.0, g/255.0, b/255.0) for (r,g,b) in data]
 	return hsv
+
+def lim(v):
+	if abs(v) > 1:
+		return 1.0
+	elif abs(v) <0:
+		return 0.0
+	else: 
+		return v
+
+def h2r(h,s,v):
+	return hsv_to_rgb(lim(h),lim(s),lim(v))
 
 def hsv2rgb(hsv):
 	'''
@@ -18,35 +31,97 @@ def hsv2rgb(hsv):
 	rgb = [(int(r*255.0), int(g*255.0), int(b*255.0)) for (r,g,b) in data]
 	return rgb
 
-focus = 1.7
+def get_hues(name):
+	p = pals[name]
+	h = [hsv_to_rgb(h,s,v)[0] for (h,s,v) in p]
+	return h
+
+def rdist(x,h):
+	d = x - h
+	if abs(d) > 0.5:
+		d = d - d/abs(d)
+	return d
+
+focus = 4.0
 def act(dist):
-    f = [(cos((d**focus)*pi)/2+0.5)**5.0 for d in dist]
-    return f
+	f = [(cos(d*2*pi)/2+0.5)**focus for d in dist]
+	return f
 
-hues = [120.0/360, 0.0/360]
-def rot(hsv):
-	hn = hsv[0]
-	dist = [abs(fmod(hn-hue, 1.0)) for hue in hues]
+class Filter(object):
+	def __init__(self, ord=4):
+		self.order = ord
+		# by default init linear filter
+		linrange = range(0,360,360/ord)
+		self.match = [c/360.0 for c in linrange]
+		self.hues = [c/360.0 for c in linrange]
+		self.sats = [1.0] * ord
+		self.update()
+	
+	def update(self):
+		self.distm = [rdist(hm,hh) for (hm,hh) in zip(self.match, self.hues)]
+		
+f_lin4 = Filter(4)
+
+f_shift10 = Filter(4)
+f_shift10.hues = [x+0.1 for x in f_shift10.match]
+f_shift10.update()
+
+f_satred = Filter(4)
+f_satred.sats[2] = -5.0
+
+def rot(hsv, fdef):
+	hn, sn = hsv[0], hsv[1]
+	
+	# calc hue
+	dist = [rdist(hn,hue) for hue in fdef.match]
 	f = act(dist)
-	hn = sum([fc*hue+(1.0-fc)*hn for (fc,hue) in zip(f,hues)])/len(hues)
-	return (hn, hsv[1], hsv[2])
-
-def adapt(hsv):
-	res = map(rot, hsv)
+	hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
+	n = len(f)
+	sf = sum(f)
+	'''
+	try:
+		assert 0 <= n <=1
+	except AssertionError:
+		print f
+		raise 
+		'''
+		
+	# calc saturation
+	try:
+		sn = sum([sn*fc*sc/sf for (sc,fc) in zip(fdef.sats,f)])
+		#sn = sum([sn*(1-fc)/n + sc*fc/n for (sc,fc) in zip(fdef.sats,f)])
+	except ZeroDivisionError:
+		print 'f=', f
+		raise 
+	
+	return (hn, sn, hsv[2])
+	
+def adapt(hsv, filter):
+	res = [rot(col, filter) for col in hsv]
 	return res
 	
 if __name__ == '__main__':
 	import Image
 	from palettes import load
+	from genimg import gen_hs
+
+	print 'loading ...'
+	img = gen_hs(0.7)
 	img = load('orig/kueche.jpg')
 	rgb_data = img.getdata()
 	hsv_data = rgb2hsv(rgb_data)
-	
-	angle = (200.0/360.0, 280.0/360.0)
+
+	#hues = get_hues('bunt')
 	print 'mapping ...'
-	hsv_new = adapt(hsv_data)
-	print '... done'
+	tic = time()
+	hsv_new = adapt(hsv_data, f_satred)
+	toc = time()
+	dt = toc-tic
+	print '...done in {:.3f} secs'.format(dt)
+	
+	print 'rendering...'
 	rgb_new = hsv2rgb(hsv_new)
 	newi = img.copy()
 	newi.putdata(rgb_new)
+	newi.show()
 	
