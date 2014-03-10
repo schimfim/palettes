@@ -33,7 +33,7 @@ def hsv2rgb(hsv):
 
 def get_hues(name):
 	p = pals[name]
-	h = [hsv_to_rgb(h,s,v)[0] for (h,s,v) in p]
+	h = sorted([hsv_to_rgb(h,s,v)[0] for (h,s,v) in p])
 	return h
 
 def rdist(x,h):
@@ -67,7 +67,17 @@ f_shift10.hues = [x+0.1 for x in f_shift10.match]
 f_shift10.update()
 
 f_satred = Filter(4)
-f_satred.sats[2] = -5.0
+f_satred.sats[0] = 2.0
+
+h = get_hues('herbst')
+f_herbst = Filter(len(h))
+f_herbst.hues = h
+f_herbst.update()
+
+h = get_hues('pond')
+f_pond = Filter(len(h))
+f_pond.hues = h
+f_pond.update()
 
 def rot(hsv, fdef):
 	hn, sn = hsv[0], hsv[1]
@@ -76,20 +86,11 @@ def rot(hsv, fdef):
 	dist = [rdist(hn,hue) for hue in fdef.match]
 	f = act(dist)
 	hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
-	n = len(f)
-	sf = sum(f)
-	'''
-	try:
-		assert 0 <= n <=1
-	except AssertionError:
-		print f
-		raise 
-		'''
 		
 	# calc saturation
+	sf = sum(f)
 	try:
 		sn = sum([sn*fc*sc/sf for (sc,fc) in zip(fdef.sats,f)])
-		#sn = sum([sn*(1-fc)/n + sc*fc/n for (sc,fc) in zip(fdef.sats,f)])
 	except ZeroDivisionError:
 		print 'f=', f
 		raise 
@@ -111,10 +112,9 @@ if __name__ == '__main__':
 	rgb_data = img.getdata()
 	hsv_data = rgb2hsv(rgb_data)
 
-	#hues = get_hues('bunt')
 	print 'mapping ...'
 	tic = time()
-	hsv_new = adapt(hsv_data, f_satred)
+	hsv_new = adapt(hsv_data, f_pond)
 	toc = time()
 	dt = toc-tic
 	print '...done in {:.3f} secs'.format(dt)
