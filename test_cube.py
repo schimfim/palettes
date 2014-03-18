@@ -2,9 +2,11 @@ from pprint import pprint
 from hues import Filter, rot
 from colorsys import rgb_to_hsv, hsv_to_rgb
 
-filt = Filter(4)
-filt.hues = [0.0,0.1,0.2,0.3]
+filt = Filter(8)
+filt.hues = [0.01, 0.135, 0.26, 0.385, 0.51, 0.635, 0.76, 0.835]
 filt.update()
+print 'match=', filt.match
+print 'focus=', filt.focus
 
 order = 4
 # init cube
@@ -20,13 +22,12 @@ for x in range(order):
 			## xform
 			(h,s,v) = rgb_to_hsv(r,g,b)
 			(h,s,v) = rot((h,s,v), filt)
-			(r,g,b) = hsv_to_rgb(h,s,v)
+			(rn,gn,bn) = hsv_to_rgb(h,s,v)
+			print("%.4f %.4f %.4f - %.4f %.4f %.4f" % (r,g,b,rn,gn,bn))
 			##
-			v_z.append((r,g,b))
+			v_z.append((rn,gn,bn))
 		v_y.append(v_z)
 	v_x.append(v_y)
-
-pprint(v_x)
 
 # transform
 

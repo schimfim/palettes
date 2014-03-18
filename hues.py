@@ -68,7 +68,7 @@ class Filter(object):
 	def update(self):
 		self.distm = [rdist(hm,hh) for (hm,hh) in zip(self.match, self.hues)]
 		self.focus = calc_focus(self.order)
-		print 'focus=', self.focus
+		#print 'update focus=', self.focus
 
 
 def fromPalette(name):
@@ -89,8 +89,8 @@ f_shift10.update()
 f_mac = Filter(8)
 f_mac.hues = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 f_mac.update()
-print f_mac.match
-print f_mac.distm
+#print f_mac.match
+#print f_mac.distm
 '''
 h = get_hues('herbst')
 f_herbst = Filter(len(h))
