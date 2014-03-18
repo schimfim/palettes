@@ -46,7 +46,7 @@ def rdist(x,h):
 
 def calc_focus(n):
 	delta = 1.0/n/2
-	gain = 0.5
+	gain = 0.5 # strenght of effect
 	f = log(gain)/log(0.5*cos(2*pi*delta)+0.5)
 	return f
 
@@ -68,7 +68,7 @@ class Filter(object):
 	def update(self):
 		self.distm = [rdist(hm,hh) for (hm,hh) in zip(self.match, self.hues)]
 		self.focus = calc_focus(self.order)
-		#print 'focus=', self.focus
+		print 'focus=', self.focus
 
 
 def fromPalette(name):
@@ -86,8 +86,11 @@ f_shift10 = Filter(4)
 f_shift10.hues = [x+0.1 for x in f_shift10.match]
 f_shift10.update()
 
-f_satred = Filter(4)
-f_satred.sats[0] = 2.0
+f_mac = Filter(8)
+f_mac.hues = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+f_mac.update()
+print f_mac.match
+print f_mac.distm
 '''
 h = get_hues('herbst')
 f_herbst = Filter(len(h))
@@ -103,16 +106,25 @@ def rot(hsv, fdef):
 	dist = [rdist(hn,hue) for hue in fdef.match]
 	f = act(dist, fdef.focus)
 	hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
+	
+	if hn<0.0:
+		hn += 1.0
+	elif hn>1.0:
+		hn -= 1.0
 		
+	if hn<0.0 or hn >1.0:
+		raise ValueError('hn=%f' % hn)
+	
 	# calc saturation
+	'''
 	sf = sum(f)
 	try:
 		sn = sum([sn*fc*sc/sf for (sc,fc) in zip(fdef.sats,f)])
 	except ZeroDivisionError:
 		print 'f=', f
 		raise 
-	
-	return (hn, sn, hsv[2])
+	'''
+	return (hn, hsv[1], hsv[2])
 	
 def adapt(hsv, filter):
 	res = [rot(col, filter) for col in hsv]
@@ -128,26 +140,34 @@ def start():
 	import Image
 	from palettes import load
 	from genimg import gen_hs
-
+	'''
 	print 'analyzing proto img ...'
-	img_prot = load('orig/herbst.jpg')
+	img_prot = load('orig/pond.jpg')
 	rgb_prot = img_prot.getdata()
 	hsv_prot = rgb2hsv(rgb_prot)
-	filt = Filter(3)
-	hc = clust1d([x[0] for x in hsv_prot], 3)
+	nc = 5
+	filt = Filter(nc)
+	hc = clust1d([x[0] for x in hsv_prot], nc)
+	hs = clust1d([x[1] for x in hsv_prot], nc)
 	print len(hc)
 	filt.hues = hc
+	#filt.sats = hs
 	filt.update()
-	
+	'''
 	print 'loading input img ...'
 	img = gen_hs(0.7)
-	img = load('orig/kueche.jpg')
+	#img = load('orig/kueche.jpg')
 	rgb_data = img.getdata()
 	hsv_data = rgb2hsv(rgb_data)
-
+	'''
+	hm = clust1d([x[0] for x in hsv_data], nc)
+	filt.match = hm
+	filt.update()
+	'''
+	
 	print 'mapping ...'
 	tic = time()
-	hsv_new = adapt(hsv_data, filt)
+	hsv_new = adapt(hsv_data, f_mac)
 	toc = time()
 	dt = toc-tic
 	print '...done in {:.3f} secs'.format(dt)
