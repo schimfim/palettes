@@ -119,12 +119,13 @@ def rot(hsv, fdef):
 	'''
 	sf = sum(f)
 	try:
-		sn = sum([sn*fc*sc/sf for (sc,fc) in zip(fdef.sats,f)])
+		sn = sum([sn*fc for fc in f])
 	except ZeroDivisionError:
 		print 'f=', f
 		raise 
+	sn = sn * max(f)
 	'''
-	return (hn, hsv[1], hsv[2])
+	return (hn, sn, hsv[2])
 	
 def adapt(hsv, filter):
 	res = [rot(col, filter) for col in hsv]
@@ -133,30 +134,39 @@ def adapt(hsv, filter):
 def clust1d(dat, n):
 	step = len(dat)/n
 	sd = sorted(dat)
-	c = sd[step::step]
+	bins = sd[0::step]
+	#print 'bins:', bins
+	c = [(bins[i]+bins[i+1])/2 for i in range(len(bins)-1)]
+	
+	#print 'clust1d:', c
+	
 	return c
 
 def start():
 	import Image
 	from palettes import load
 	from genimg import gen_hs
-	'''
+	
 	print 'analyzing proto img ...'
-	img_prot = load('orig/pond.jpg')
+	img_prot = gen_hs(0.7)
+	img_prot = load('orig/herbst.jpg')
+	#img_prot = load('orig/kueche.jpg')
+	img_prot.show()
 	rgb_prot = img_prot.getdata()
 	hsv_prot = rgb2hsv(rgb_prot)
 	nc = 5
 	filt = Filter(nc)
 	hc = clust1d([x[0] for x in hsv_prot], nc)
-	hs = clust1d([x[1] for x in hsv_prot], nc)
+	#hs = clust1d([x[1] for x in hsv_prot], nc)
 	print len(hc)
 	filt.hues = hc
 	#filt.sats = hs
 	filt.update()
-	'''
+	
 	print 'loading input img ...'
 	img = gen_hs(0.7)
-	#img = load('orig/kueche.jpg')
+	img = load('orig/pond.jpg')
+	img.show()
 	rgb_data = img.getdata()
 	hsv_data = rgb2hsv(rgb_data)
 	'''
@@ -164,10 +174,9 @@ def start():
 	filt.match = hm
 	filt.update()
 	'''
-	
 	print 'mapping ...'
 	tic = time()
-	hsv_new = adapt(hsv_data, f_mac)
+	hsv_new = adapt(hsv_data, filt)
 	toc = time()
 	dt = toc-tic
 	print '...done in {:.3f} secs'.format(dt)
