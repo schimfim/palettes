@@ -2,41 +2,8 @@ from colorsys import rgb_to_hsv, hsv_to_rgb
 from math import fmod, cos, pi, log
 from pals import pals
 from time import time
-
-def rgb2hsv(data):
-	'''
-	Transform raw rgb data (bytes) to hsv
-	floats.
-	'''
-	hsv = [rgb_to_hsv(r/255.0, g/255.0, b/255.0) for (r,g,b) in data]
-	return hsv
-
-def lim(v):
-	if abs(v) > 1:
-		return 1.0
-	elif abs(v) <0:
-		return 0.0
-	else: 
-		return v
-
-def h2r(h,s,v):
-	return hsv_to_rgb(lim(h),lim(s),lim(v))
-
-def hsv2rgb(hsv):
-	'''
-	Transform hsv floats to raw rgb data
-	(bytes)
-	'''
-	data = [hsv_to_rgb(h,s,v) for (h,s,v) in hsv]
-	rgb = [(int(r*255.0), int(g*255.0), int(b*255.0)) for (r,g,b) in data]
-	return rgb
-
-def get_hues(name):
-	p = pals[name]
-	hh = sorted([hsv_to_rgb(h,s,v)[0] for (h,s,v) in p])
-	ss = sorted([hsv_to_rgb(h,s,v)[1] for (h,s,v) in p])
-	
-	return (hh,ss)
+import pdb
+from  utils import add_palettes, clust1d, load
 
 def rdist(x,h):
 	d = x - h
@@ -52,143 +19,208 @@ def calc_focus(n):
 
 def act(dist, focus):
 	f = [(cos(d*2*pi)/2+0.5)**focus for d in dist]
+	# 
+	'''
+	mf = max(f)
+	for i in range(len(f)):
+		if f[i] == mf:
+			f[i] = 1.0
+		else:
+			f[i] = 0.0
+	'''
+	
+	#pdb.set_trace()
 	return f
 
 class Filter(object):	
 	def __init__(self, ord=4):
 		self.order = ord
 		# by default init linear filter
-		linrange = range(0,360,360/ord)
+		linrange = range(180/ord,360,360/ord)
 		self.match = [c/360.0 for c in linrange]
 		self.hues = [c/360.0 for c in linrange]
 		self.sats = [1.0] * ord
 		self.focus = 1.0
+		self.desat = False 
 		self.update()
 	
 	def update(self):
+		#self.order = len(self.hues)-1
+		#linrange = range(0,360,360/self.order)
+		#self.match = [c/360.0 for c in linrange]
 		self.distm = [rdist(hm,hh) for (hm,hh) in zip(self.match, self.hues)]
 		self.focus = calc_focus(self.order)
 		#print 'update focus=', self.focus
 
-
-def fromPalette(name):
-		(h,s) = get_hues(name)
-		filt = Filter(len(h))
-		filt.hues = h
-		#filt.sats = s
-		filt.update()
-		return filt
-
-
-f_lin4 = Filter(4)
-
-f_shift10 = Filter(4)
-f_shift10.hues = [x+0.1 for x in f_shift10.match]
-f_shift10.update()
-
-f_mac = Filter(8)
-f_mac.hues = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-f_mac.update()
-#print f_mac.match
-#print f_mac.distm
-'''
-h = get_hues('herbst')
-f_herbst = Filter(len(h))
-f_herbst.hues = h
-f_herbst.update()
-'''
-f_pond = fromPalette('pond')
-
 def rot(hsv, fdef):
-	hn, sn = hsv[0], hsv[1]
+	hn,sn,vn = hsv[0], hsv[1], hsv[2]
 	
 	# calc hue
 	dist = [rdist(hn,hue) for hue in fdef.match]
 	f = act(dist, fdef.focus)
-	hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
 	
-	if hn<0.0:
-		hn += 1.0
-	elif hn>1.0:
-		hn -= 1.0
-		
+	hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
+	#hn = sum([fc*d for (fc,d) in zip(f,fdef.hues)])
+
+	if hn<0.0: hn += 1.0
+	elif hn>1.0: hn -= 1.0
 	if hn<0.0 or hn >1.0:
 		raise ValueError('hn=%f' % hn)
 	
-	# calc saturation
-	'''
-	sf = sum(f)
-	try:
-		sn = sum([sn*fc for fc in f])
-	except ZeroDivisionError:
-		print 'f=', f
-		raise 
-	sn = sn * max(f)
-	'''
-	return (hn, sn, hsv[2])
+	if fdef.desat:
+		sf = sum([fi for (fi,di) in zip(f,fdef.distm) if di != 0.0])
+		sn *= sf
+	
+	return (hn,sn,vn)
 	
 def adapt(hsv, filter):
 	res = [rot(col, filter) for col in hsv]
 	return res
 
-def clust1d(dat, n):
-	step = len(dat)/n
-	sd = sorted(dat)
-	bins = sd[0::step]
-	#print 'bins:', bins
-	c = [(bins[i]+bins[i+1])/2 for i in range(len(bins)-1)]
-	
-	#print 'clust1d:', c
-	
-	return c
 
-def start():
-	import Image
-	from palettes import load
-	from genimg import gen_hs
+'''
+Unit tests
+'''
+import unittest
+from genimg import gen_hs
+from utils import load
+test_all = False
+
+class TestColorMods(unittest.TestCase):
+	@classmethod
+	def setUpClass(cls):
+		# store test images in dict
+		cls.imgs = {}
+		cls.hsv = {}
+		#
+		img = gen_hs(1.0)
+		hsv_data = rgb2hsv(img.getdata())
+		cls.imgs['palette'] = img
+		cls.hsv['palette'] = hsv_data
+		#
+		img = load('orig/herbst.jpg')
+		cls.imgs['herbst'] = img
+		cls.hsv['herbst'] = rgb2hsv(img.getdata())
 	
-	print 'analyzing proto img ...'
-	img_prot = gen_hs(0.7)
-	img_prot = load('orig/herbst.jpg')
-	#img_prot = load('orig/kueche.jpg')
-	img_prot.show()
-	rgb_prot = img_prot.getdata()
-	hsv_prot = rgb2hsv(rgb_prot)
-	nc = 5
-	filt = Filter(nc)
-	hc = clust1d([x[0] for x in hsv_prot], nc)
-	#hs = clust1d([x[1] for x in hsv_prot], nc)
-	print len(hc)
-	filt.hues = hc
-	#filt.sats = hs
-	filt.update()
+	def setUp(self):
+		self.img = TestColorMods.imgs['palette']
+		self.hsv_data = TestColorMods.hsv['palette']
+		self.filt = Filter(8)
+
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_blu2red(self):
+		self.filt.hues[4] = 0.0
+		self.filt.update()
+		self.applyFilter()
 	
-	print 'loading input img ...'
-	img = gen_hs(0.7)
-	img = load('orig/pond.jpg')
-	img.show()
-	rgb_data = img.getdata()
-	hsv_data = rgb2hsv(rgb_data)
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_blu_shift(self):
+		self.filt.match[4] += 0.1
+		self.filt.update()
+		self.applyFilter()
+		
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_single_hue(self):
+		self.filt.distm = [0.0]*self.filt.order
+		self.filt.distm[4] = 0.2
+		self.filt.focus = 4.0
+		self.applyFilter()
+	
 	'''
-	hm = clust1d([x[0] for x in hsv_data], nc)
-	filt.match = hm
-	filt.update()
+	Test highlighting of a single color
+	(set brightness proportional to
+	membership)
 	'''
-	print 'mapping ...'
-	tic = time()
-	hsv_new = adapt(hsv_data, filt)
-	toc = time()
-	dt = toc-tic
-	print '...done in {:.3f} secs'.format(dt)
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_highlight_hue(self):
+		n = self.filt.order
+		hsv_data = self.hsv_data
+		hsv_data = TestColorMods.hsv['herbst']
+		hsv_new = []
+		self.filt.distm = [0.0]*n
+		self.filt.distm[7] = 1.0
+		for hsv in hsv_data:
+			hn, sn, vn = hsv[0], hsv[1],hsv[2]
+			dist = [rdist(hn,hue) for hue in self.filt.match]
+			f = act(dist, self.filt.focus)
+			sf = sum([fi*di for (fi,di) in zip(f,self.filt.distm)])
+			sn *= sf
+			#vn = 1-sf
+			hsv_new.append((hn, sn, vn))
+		self.render(hsv_new)
 	
-	print 'rendering...'
-	rgb_new = hsv2rgb(hsv_new)
-	newi = img.copy()
-	newi.putdata(rgb_new)
-	newi.show()
+	'''
+	Test shifting selected colors
+	(set brightness proportional to
+	membership)
+	'''
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_shift_select(self):
+		n = self.filt.order
+		hsv_data = TestColorMods.hsv['herbst']
+		self.filt.distm = [0.0]*n
+		self.filt.distm[7] = 0.3
+		self.filt.distm[2] = -0.4
+		self.filt.desat = True 
+		hsv_new = adapt(hsv_data, self.filt)
+		self.render(hsv_new)
+	
+	'''
+	Same as before but not with shifting
+	but setting absolute colors
+	'''
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_set_select(self):
+		n = self.filt.order
+		hsv_data = TestColorMods.hsv['herbst']
+		hsv_new = []
+		self.filt.distm = [0.0]*n
+		self.filt.distm[7] = 0.3
+		self.filt.distm[2] = -0.4
+		for (hn,sn,vn) in hsv_data:
+			dist = [rdist(hn,hue) for hue in self.filt.match]
+			f = act(dist, self.filt.focus)
+			hn = sum([fc*d for (fc,d) in zip(f,self.filt.hues)])
+			sf = sum([fi for (fi,di) in zip(f,self.filt.distm) if di != 0.0])
+			sn *= sf
+			hsv_new.append((hn,sn,vn))
+		self.render(hsv_new)
+	
+	# material not ready
+	@unittest.skip("not complete")
+	def test_imageMatch(self):
+		img_prot = load('orig/kueche.jpg')
+		rgb_prot = img_prot.getdata()
+		hsv_prot = rgb2hsv(rgb_prot)
+		nc = 16
+		filt = Filter(nc)
+		hc = clust1d([x[0] for x in hsv_prot], nc, 1000)
+		add_palettes(img_prot, hc)
+		img_prot.show()
+		filt.hues = hc
+		filt.update()
+		
+	'''
+	Test utilities
+	'''
+	def applyFilter(self):
+		print 'mapping ...'
+		tic = time()
+		hsv_new = adapt(self.hsv_data, self.filt)
+		toc = time()
+		dt = toc-tic
+		print '...done in {:.3f} secs'.format(dt)
+		self.render(hsv_new)
+		
+	def render(self, hsv_new):
+		print 'rendering...'
+		rgb_new = hsv2rgb(hsv_new)
+		newi = self.img.copy()
+		newi.putdata(rgb_new)
+		add_palettes(newi, self.filt.match, self.filt.hues)
+		newi.show()
+	
 
 if __name__ == '__main__':
-	import cProfile
-	#cProfile.run('start()')
-	start()
+	unittest.main()
 
