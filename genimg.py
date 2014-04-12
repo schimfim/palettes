@@ -17,6 +17,19 @@ def gen_hs(v_def = 0.5):
 			drw.rectangle([(x,y),(x+w,y+h)], fill=col)
 	return img
 	
+def gen_3():
+	width, height = 256, 256
+	img = Image.new('RGB', (width,height))
+	drw = ImageDraw.Draw(img)
+	col = (255,0,0)
+	drw.rectangle([(10,30),(50,80)], fill=col)
+	col = (10,250,10)
+	drw.rectangle([(100,130),(120,150)], fill=col)
+	col = (15,10,240)
+	drw.rectangle([(10,230),(150,280)], fill=col)
+
+	return img
+	
 if __name__=='__main__':
 	img = gen_hs(0.7)
 	img.show()
