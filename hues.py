@@ -3,7 +3,7 @@ from math import fmod, cos, pi, log
 from pals import pals
 from time import time
 import pdb
-from  utils import add_palettes, clust1d, load
+from  utils import add_palettes, clust1d, load, rgb2hsv, hsv2rgb
 
 def rdist(x,h):
 	d = x - h
@@ -42,6 +42,7 @@ class Filter(object):
 		self.sats = [1.0] * ord
 		self.focus = 1.0
 		self.desat = False 
+		self.hue_mode = False
 		self.update()
 	
 	def update(self):
@@ -59,8 +60,10 @@ def rot(hsv, fdef):
 	dist = [rdist(hn,hue) for hue in fdef.match]
 	f = act(dist, fdef.focus)
 	
-	hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
-	#hn = sum([fc*d for (fc,d) in zip(f,fdef.hues)])
+	if not fdef.hue_mode:
+		hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
+	else: 
+		hn = sum([fc*d for (fc,d) in zip(f,fdef.hues)]) / fdef.order
 
 	if hn<0.0: hn += 1.0
 	elif hn>1.0: hn -= 1.0
@@ -185,7 +188,22 @@ class TestColorMods(unittest.TestCase):
 			sn *= sf
 			hsv_new.append((hn,sn,vn))
 		self.render(hsv_new)
+
+	'''
+	Identity with highlight
+	'''
+	#@unittest.skipUnless(test_all, 'test_all not set')
+	def test_identity(self):
+		hsv_data = TestColorMods.hsv['herbst']
+		n = self.filt.order
+		self.filt.distm = [0.1]*n
+		#self.filt.focus = 50.0
+		self.filt.desat = True 
+		self.filt.hue_mode = True
+		hsv_new = adapt(hsv_data, self.filt)
+		self.render(hsv_new)
 	
+
 	# material not ready
 	@unittest.skip("not complete")
 	def test_imageMatch(self):
