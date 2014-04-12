@@ -176,12 +176,6 @@ def calc_palette(img, ncol=8):
 #
 # image utilities
 
-def load(filename, size=(256,256)):
-	img = Image.open(filename)
-	if thumbnail:
-		img.thumbnail(size, Image.ANTIALIAS)
-	return img
-
 import glob, os
 def load_all(path, size=(128,128)):
 	imgs = []
