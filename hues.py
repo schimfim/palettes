@@ -5,61 +5,61 @@ from time import time
 import pdb
 from  utils import add_palettes, clust1d, load, rgb2hsv, hsv2rgb
 
-def rdist(x,h):
-	d = x - h
-	if abs(d) > 0.5:
-		d = d - d/abs(d)
-	return d
-
-def calc_focus(n):
-	delta = 1.0/n/2
-	gain = 0.5 # strenght of effect
-	f = log(gain)/log(0.5*cos(2*pi*delta)+0.5)
-	return f
-
-def act(dist, focus):
-	f = [(cos(d*2*pi)/2+0.5)**focus for d in dist]
-	# 
-	'''
-	mf = max(f)
-	for i in range(len(f)):
-		if f[i] == mf:
-			f[i] = 1.0
-		else:
-			f[i] = 0.0
-	'''
-	
-	#pdb.set_trace()
-	return f
-
-class Filter(object):	
+class Filter(object):
 	def __init__(self, ord=4):
 		self.order = ord
 		# by default init linear filter
 		linrange = range(180/ord,360,360/ord)
 		self.match = [c/360.0 for c in linrange]
 		self.hues = [c/360.0 for c in linrange]
+		self.switch = [1.0] * ord
 		self.sats = [1.0] * ord
 		self.focus = 1.0
-		self.desat = False 
+
+		# configuration
+		self.desat = False
 		self.hue_mode = False
+		self.gain = 0.5
+		self.act_fcn = act
+
 		self.update()
-	
+
 	def update(self):
-		#self.order = len(self.hues)-1
-		#linrange = range(0,360,360/self.order)
-		#self.match = [c/360.0 for c in linrange]
 		self.distm = [rdist(hm,hh) for (hm,hh) in zip(self.match, self.hues)]
-		self.focus = calc_focus(self.order)
-		#print 'update focus=', self.focus
+		self.focus = self.calc_focus()
+
+	def calc_focus(self):
+		delta = 1.0/self.order/2
+		f = log(self.gain)/log(0.5*cos(2*pi*delta)+0.5)
+		return f
+
+
+def rdist(x,h):
+	d = x - h
+	if abs(d) > 0.5:
+		d = d - d/abs(d)
+	return d
+
+
+### Activation functions ###
+
+def act(dist, focus):
+	f = [(cos(d*2*pi)/2+0.5)**focus for d in dist]
+	return f
+
+''' 1.0 for min distance, 0.0 otherwise '''
+def act_max(dist, focus):
+	md = min(dist)
+	f = []
+	for d in dist:
+		if d == md: f.append(1.0)
+		else: f.append(0.0)
+	return f
 
 def rot(hsv, fdef):
 	hn,sn,vn = hsv[0], hsv[1], hsv[2]
-	
-	# calc hue
 	dist = [rdist(hn,hue) for hue in fdef.match]
-	f = act(dist, fdef.focus)
-	
+	f = fdef.act_fcn(dist, fdef.focus)
 	if not fdef.hue_mode:
 		hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
 	else: 
@@ -71,7 +71,8 @@ def rot(hsv, fdef):
 		raise ValueError('hn=%f' % hn)
 	
 	if fdef.desat:
-		sf = sum([fi for (fi,di) in zip(f,fdef.distm) if di != 0.0])
+		sf = sum([fi for (fi,di) in zip(f,fdef.switch) if di != 0.0])
+		#sf = sum(f)/fdef.order
 		sn *= sf
 	
 	return (hn,sn,vn)
@@ -134,22 +135,14 @@ class TestColorMods(unittest.TestCase):
 	(set brightness proportional to
 	membership)
 	'''
-	@unittest.skipUnless(test_all, 'test_all not set')
+	#@unittest.skipUnless(test_all, 'test_all not set')
 	def test_highlight_hue(self):
 		n = self.filt.order
-		hsv_data = self.hsv_data
 		hsv_data = TestColorMods.hsv['herbst']
-		hsv_new = []
-		self.filt.distm = [0.0]*n
-		self.filt.distm[7] = 1.0
-		for hsv in hsv_data:
-			hn, sn, vn = hsv[0], hsv[1],hsv[2]
-			dist = [rdist(hn,hue) for hue in self.filt.match]
-			f = act(dist, self.filt.focus)
-			sf = sum([fi*di for (fi,di) in zip(f,self.filt.distm)])
-			sn *= sf
-			#vn = 1-sf
-			hsv_new.append((hn, sn, vn))
+		self.filt.switch = [0.0]*n
+		self.filt.switch[1] = 1.0
+		self.filt.desat = True
+		hsv_new = adapt(hsv_data, self.filt)
 		self.render(hsv_new)
 	
 	'''
@@ -192,7 +185,7 @@ class TestColorMods(unittest.TestCase):
 	'''
 	Identity with highlight
 	'''
-	#@unittest.skipUnless(test_all, 'test_all not set')
+	@unittest.skipUnless(test_all, 'test_all not set')
 	def test_identity(self):
 		hsv_data = TestColorMods.hsv['herbst']
 		n = self.filt.order
