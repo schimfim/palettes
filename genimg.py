@@ -3,7 +3,7 @@ import ImageDraw
 from colorsys import rgb_to_hsv, hsv_to_rgb
 
 def gen_hs(v_def = 0.5):
-	nh, ns = 32,32
+	nh, ns = 128,128
 	width, height = 256, 256
 	w,h = width / nh, height / ns
 	img = Image.new('RGB', (width,height))
