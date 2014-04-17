@@ -3,7 +3,9 @@ from math import fmod, cos, pi, log
 from pals import pals
 from time import time
 import pdb
-from  utils import add_palettes, clust1d, load, rgb2hsv, hsv2rgb
+from  utils import add_palettes, clust1d, load, rgb2hsv, hsv2rgb, get_hues
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class Filter(object):
 	def __init__(self, ord=4):
@@ -18,21 +20,36 @@ class Filter(object):
 
 		# configuration
 		self.desat = False
-		self.hue_mode = False
+		self.highlight_limit = 0.0
 		self.gain = 0.5
 		self.act_fcn = act
 
 		self.update()
 
-	def update(self):
+	def update_simple(self):
 		self.distm = [rdist(hm,hh) for (hm,hh) in zip(self.match, self.hues)]
 		self.focus = self.calc_focus()
+
+	def update(self, new_hues=None):
+		n = self.order
+		self.distm = [0.0]*n
+		self.focus = self.calc_focus()
+		if not new_hues: # only for testing
+			new_hues = self.hues
+		for (i,hm) in enumerate(self.match):
+			dist = [rdist(hm,hh) for hh in new_hues]
+			f = self.act_fcn(dist, 0.8)
+			self.distm[i] = sum([fc*d for (fc,d) in zip(f,dist)])
 
 	def calc_focus(self):
 		delta = 1.0/self.order/2
 		f = log(self.gain)/log(0.5*cos(2*pi*delta)+0.5)
 		return f
-
+		
+	def set_switches(self, *idx):
+		self.switch = [0.0]*self.order
+		for i in idx:
+			self.switch[i] = 1.0
 
 def rdist(x,h):
 	d = x - h
@@ -48,11 +65,13 @@ def act(dist, focus):
 	return f
 
 ''' 1.0 for min distance, 0.0 otherwise '''
+# only useful for testing, errors due to
+# multiplication with distm!
 def act_max(dist, focus):
-	md = min(dist)
+	md = min([abs(d) for d in dist])
 	f = []
 	for d in dist:
-		if d == md: f.append(1.0)
+		if abs(d) == md: f.append(1.0)
 		else: f.append(0.0)
 	return f
 
@@ -60,10 +79,16 @@ def rot(hsv, fdef):
 	hn,sn,vn = hsv[0], hsv[1], hsv[2]
 	dist = [rdist(hn,hue) for hue in fdef.match]
 	f = fdef.act_fcn(dist, fdef.focus)
-	if not fdef.hue_mode:
+	if fdef.highlight_limit == 0.0:
 		hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
 	else: 
-		hn = sum([fc*d for (fc,d) in zip(f,fdef.hues)]) / fdef.order
+		sd = sum([abs(d) for d in fdef.distm])
+		lim = 1.0/fdef.order/4.0
+		vf = sum([fc for (fc,d) in zip(f,fdef.distm) if abs(d) >= lim])
+		#ad = sum(act(fdef.distm,fdef.focus))
+		#vf = sum([fc*(1-0)*ad for fc in f])
+		vn *= vf
+		#vn = vf
 
 	if hn<0.0: hn += 1.0
 	elif hn>1.0: hn -= 1.0
@@ -96,35 +121,44 @@ class TestColorMods(unittest.TestCase):
 		# store test images in dict
 		cls.imgs = {}
 		cls.hsv = {}
-		#
+		# palette
 		img = gen_hs(1.0)
 		hsv_data = rgb2hsv(img.getdata())
 		cls.imgs['palette'] = img
 		cls.hsv['palette'] = hsv_data
-		#
+		# herbst
 		img = load('orig/herbst.jpg')
 		cls.imgs['herbst'] = img
 		cls.hsv['herbst'] = rgb2hsv(img.getdata())
+		# kueche
+		img = load('orig/kueche.jpg')
+		cls.imgs['kueche'] = img
+		cls.hsv['kueche'] = rgb2hsv(img.getdata())
+		# pond
+		img = load('orig/pond.jpg')
+		cls.imgs['pond'] = img
+		cls.hsv['pond'] = rgb2hsv(img.getdata())
 	
 	def setUp(self):
-		self.img = TestColorMods.imgs['palette']
-		self.hsv_data = TestColorMods.hsv['palette']
+		img_key = 'palette'
+		self.img = TestColorMods.imgs[img_key]
+		self.hsv_data = TestColorMods.hsv[img_key]
 		self.filt = Filter(8)
 
 	@unittest.skipUnless(test_all, 'test_all not set')
-	def test_blu2red(self):
+	def test_shift_hue(self):
 		self.filt.hues[4] = 0.0
 		self.filt.update()
 		self.applyFilter()
 	
 	@unittest.skipUnless(test_all, 'test_all not set')
-	def test_blu_shift(self):
+	def test_shift_match(self):
 		self.filt.match[4] += 0.1
 		self.filt.update()
 		self.applyFilter()
 		
 	@unittest.skipUnless(test_all, 'test_all not set')
-	def test_single_hue(self):
+	def test_shift_dist(self):
 		self.filt.distm = [0.0]*self.filt.order
 		self.filt.distm[4] = 0.2
 		self.filt.focus = 4.0
@@ -132,70 +166,79 @@ class TestColorMods(unittest.TestCase):
 	
 	'''
 	Test highlighting of a single color
-	(set brightness proportional to
+	(set saturation proportional to
 	membership)
 	'''
-	#@unittest.skipUnless(test_all, 'test_all not set')
+	@unittest.skipUnless(test_all, 'test_all not set')
 	def test_highlight_hue(self):
-		n = self.filt.order
-		hsv_data = TestColorMods.hsv['herbst']
-		self.filt.switch = [0.0]*n
-		self.filt.switch[1] = 1.0
+		self.filt.set_switches(2)
 		self.filt.desat = True
-		hsv_new = adapt(hsv_data, self.filt)
-		self.render(hsv_new)
+		self.applyFilter()
 	
 	'''
 	Test shifting selected colors
-	(set brightness proportional to
-	membership)
 	'''
 	@unittest.skipUnless(test_all, 'test_all not set')
 	def test_shift_select(self):
-		n = self.filt.order
-		hsv_data = TestColorMods.hsv['herbst']
-		self.filt.distm = [0.0]*n
-		self.filt.distm[7] = 0.3
-		self.filt.distm[2] = -0.4
+		self.filt.set_switches(2,7)
+		self.filt.hues[7] = 0.3
+		self.filt.hues[2] = 0.0
+		self.filt.update()
 		self.filt.desat = True 
-		hsv_new = adapt(hsv_data, self.filt)
-		self.render(hsv_new)
+		self.applyFilter()
 	
-	'''
-	Same as before but not with shifting
-	but setting absolute colors
-	'''
-	@unittest.skipUnless(test_all, 'test_all not set')
-	def test_set_select(self):
-		n = self.filt.order
-		hsv_data = TestColorMods.hsv['herbst']
-		hsv_new = []
-		self.filt.distm = [0.0]*n
-		self.filt.distm[7] = 0.3
-		self.filt.distm[2] = -0.4
-		for (hn,sn,vn) in hsv_data:
-			dist = [rdist(hn,hue) for hue in self.filt.match]
-			f = act(dist, self.filt.focus)
-			hn = sum([fc*d for (fc,d) in zip(f,self.filt.hues)])
-			sf = sum([fi for (fi,di) in zip(f,self.filt.distm) if di != 0.0])
-			sn *= sf
-			hsv_new.append((hn,sn,vn))
-		self.render(hsv_new)
-
 	'''
 	Identity with highlight
 	'''
 	@unittest.skipUnless(test_all, 'test_all not set')
 	def test_identity(self):
-		hsv_data = TestColorMods.hsv['herbst']
-		n = self.filt.order
-		self.filt.distm = [0.1]*n
-		#self.filt.focus = 50.0
+		self.filt.focus = 30.0
 		self.filt.desat = True 
-		self.filt.hue_mode = True
-		hsv_new = adapt(hsv_data, self.filt)
-		self.render(hsv_new)
+		self.applyFilter()
 	
+	'''
+	Test pre defined palette.
+	Linspace = [0.0611, 0.1861, 0.3111, 0.4361, 0.5611, 0.6861, 0.8111, 0.9361]
+	'''
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_palette(self):
+		self.filt.hues = [0.1, 0.15, 0.3111, 0.4361, 0.5, 0.6861, 0.8111, 0.04]
+		self.filt.update()
+		self.applyFilter()
+
+	'''
+	Test delta highlighting.
+	All dists below limit will be darkened
+	'''
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_delta_highlight(self):
+		self.filt.hues = [0.1, 0.15, 0.3111, 0.4361, 0.5, 0.6861, 0.8111, 0.04]
+		self.filt.update()
+		logging.info('Set distm to %s', self.filt.distm)
+		self.filt.highlight_limit = 0.03
+		self.applyFilter()
+
+	'''
+	Test delta setting with fewer colors.
+	'''
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_delta_setting(self):
+		self.filt.hues = [0.4, 0.75]
+		self.filt.update()
+		logging.info('Set distm to %s', self.filt.distm)
+		self.filt.highlight_limit = 0.0
+		self.applyFilter()
+
+	'''
+	Test delta setting with fewer colors.
+	'''
+	#@unittest.skipUnless(test_all, 'test_all not set')
+	def test_delta_setting(self):
+		(self.filt.hues,foo) = get_hues('herbst')
+		self.filt.update()
+		logging.info('Set distm to %s', self.filt.distm)
+		self.filt.highlight_limit = 0.0
+		self.applyFilter()
 
 	# material not ready
 	@unittest.skip("not complete")
@@ -228,7 +271,8 @@ class TestColorMods(unittest.TestCase):
 		rgb_new = hsv2rgb(hsv_new)
 		newi = self.img.copy()
 		newi.putdata(rgb_new)
-		add_palettes(newi, self.filt.match, self.filt.hues)
+		dists = [h-d for (h,d) in zip(self.filt.match, self.filt.distm)]
+		add_palettes(newi, self.filt.match, self.filt.hues, dists)
 		newi.show()
 	
 
