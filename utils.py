@@ -3,6 +3,7 @@ import ImageDraw
 from colorsys import hsv_to_rgb, rgb_to_hsv
 import pdb
 import genimg
+from pals import pals
 
 def load(filename, size=(256,256), thumbnail=True):
 	img = Image.open(filename)
@@ -27,7 +28,7 @@ def _draw_palette_with_hues(hues, h=20):
 	Draw palettes with hue vector
 	Returns Image
 	"""
-	width = 128
+	width = 256
 	n = len(hues)
 	rgb = hues_to_rgb(hues)
 	img = Image.new('RGB', (width, h))
@@ -42,12 +43,15 @@ def _draw_palette_with_hues(hues, h=20):
 	
 	return img
 
-def add_palettes(img, hues, hues2=None):
-	pal_img = _draw_palette_with_hues(hues)
-	img.paste(pal_img, (img.size[0]-128, 0))
+def add_palettes(img, hues, hues2=None, hues3=None):
+	pal_img = _draw_palette_with_hues(hues, 10)
+	img.paste(pal_img, (0,0))
 	if hues2 !=None:
 		pal_img = _draw_palette_with_hues(hues2, 10)
-		img.paste(pal_img, (img.size[0]-128, 10))
+		img.paste(pal_img, (0,10))
+		if hues3 !=None:
+			pal_img = _draw_palette_with_hues(hues3, 10)
+			img.paste(pal_img, (0,20))
 
 def rgb2hsv(data):
 	'''
