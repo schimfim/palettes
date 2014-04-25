@@ -2,8 +2,8 @@ import Image
 import ImageDraw
 from colorsys import rgb_to_hsv, hsv_to_rgb
 
-def gen_hs(v_def = 0.5):
-	nh, ns = 128,128
+def gen_hs(v_def = 0.5, vmap = None, nc = 128):
+	nh, ns = nc, nc
 	width, height = 256, 256
 	w,h = width / nh, height / ns
 	img = Image.new('RGB', (width,height))
@@ -12,6 +12,8 @@ def gen_hs(v_def = 0.5):
 		for sat in range(ns):
 			x = hue * w
 			y = sat * h
+			if vmap:
+				v_def = vmap[hue][sat]
 			rgb = hsv_to_rgb(float(hue)/nh, float(sat)/ns, v_def)
 			col = (int(rgb[0]*255.0), int(rgb[1]*255.0), int(rgb[2]*255.0))
 			drw.rectangle([(x,y),(x+w,y+h)], fill=col)

@@ -134,7 +134,7 @@ class PaletteTestBase(unittest.TestCase):
 		# load images
 		cls.load('herbst')
 		cls.load('kueche')
-		cls.load('karussel')
+		#cls.load('karussel')
 		#cls.load('pond')
 		#cls.load('city')
 
@@ -159,7 +159,7 @@ class PaletteTestBase(unittest.TestCase):
 
 class TestColorMods(PaletteTestBase):
 	def setUp(self):
-		img_key = 'karussel'
+		img_key = 'herbst'
 		self.img = TestColorMods.imgs[img_key]
 		self.hsv_data = TestColorMods.hsv[img_key]
 		self.filt = Filter(8)
@@ -274,7 +274,7 @@ class TestColorMods(PaletteTestBase):
 	'''
 	#@unittest.skipUnless(test_all, 'test_all not set')
 	def test_delta_set_random(self):
-		self.filt.hues = [random() for i in range(5)]
+		self.filt.hues = sorted([random() for i in range(5)])
 		self.filt.update()
 		logging.info('Set distm to %s', self.filt.distm)
 		self.filt.highlight = False 

@@ -1,26 +1,29 @@
 import hues
+from genimg import gen_hs
+from time import time
 
-nmap=32
+nmap=64
 
-def _sample(hsv):
+def _sample(hsv, hs_map, delta):
 	hn,sn,vn = hsv[0], hsv[1], hsv[2]
 	
 	# indices
 	hi = int(hn*(nmap-1))
 	si = int(sn*(nmap-1))
+	hs_map[hi][si] += delta*1000
 	
-def analyse(hsv, hsmap):
+def analyse(hsv):
 	# setup map
-	hs_map = [[0.0 for i in range(nmap)] for j in range(nmap)]]
+	hs_map = [[0.0 for i in range(nmap)] for j in range(nmap)]
 	
 	# sample data
 	for col in hsv:
-		_sample(col, hs_map)
+		_sample(col, hs_map, 1.0/len(hsv))
 	
 	# generate map hsv values
+	img = gen_hs(vmap=hs_map, nc=nmap)
 	
-	
-	return hsv_new
+	return img
 
 '''
 Unit tests
@@ -38,21 +41,14 @@ class TestColorAnalysis(hues.PaletteTestBase):
 	def applyFilter(self):
 		print 'analysing ...'
 		tic = time()
-		hsv_new = analyse(self.hsv_data)
+		img_new = analyse(self.hsv_data)
 		toc = time()
 		dt = toc-tic
 		print '...done in {:.3f} secs'.format(dt)
-		self.render(hsv_new)
+		img_new.show()
 		
-	def render(self, hsv_new):
-		print 'rendering...'
-		rgb_new = hsv2rgb(hsv_new)
-		newi = self.img.copy()
-		newi.putdata(rgb_new)
-		newi.show()
-
 	def setUp(self):
-		img_key = 'karussel'
+		img_key = 'kueche'
 		self.img = hues.PaletteTestBase.imgs[img_key]
 		self.hsv_data = hues.PaletteTestBase.hsv[img_key]
 		self.filt = hues.Filter(8)
