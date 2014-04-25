@@ -2,7 +2,7 @@ from colorsys import rgb_to_hsv, hsv_to_rgb
 from math import fmod, cos, pi, log
 from pals import pals
 from time import time
-import pdb
+from pdb import set_trace
 from  utils import add_palettes, clust1d, load, rgb2hsv, hsv2rgb, get_hues
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +20,7 @@ class Filter(object):
 
 		# configuration
 		self.desat = False
-		self.highlight_limit = 0.0
+		self.highlight = False 
 		self.gain = 0.5
 		self.act_fcn = act
 
@@ -34,12 +34,12 @@ class Filter(object):
 		n = self.order
 		self.distm = [0.0]*n
 		self.focus = self.calc_focus()
-		if not new_hues: # only for testing
+		if not new_hues:
 			new_hues = self.hues
 		for (i,hm) in enumerate(self.match):
 			dist = [rdist(hm,hh) for hh in new_hues]
-			f = self.act_fcn(dist, 0.8)
-			self.distm[i] = sum([fc*d for (fc,d) in zip(f,dist)])
+			f = self.act_fcn(dist, self.focus)
+			self.distm[i] = sum([fc*d for (fc,d) in zip(f,dist)])/sum(f)
 
 	def calc_focus(self):
 		delta = 1.0/self.order/2
@@ -79,16 +79,12 @@ def rot(hsv, fdef):
 	hn,sn,vn = hsv[0], hsv[1], hsv[2]
 	dist = [rdist(hn,hue) for hue in fdef.match]
 	f = fdef.act_fcn(dist, fdef.focus)
-	if fdef.highlight_limit == 0.0:
-		hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
-	else: 
-		sd = sum([abs(d) for d in fdef.distm])
-		lim = 1.0/fdef.order/4.0
+	hn -= sum([fc*d for (fc,d) in zip(f,fdef.distm)])
+	if fdef.highlight:
+		md = max([abs(d) for d in fdef.distm])
+		lim = md * 0.7
 		vf = sum([fc for (fc,d) in zip(f,fdef.distm) if abs(d) >= lim])
-		#ad = sum(act(fdef.distm,fdef.focus))
-		#vf = sum([fc*(1-0)*ad for fc in f])
 		vn *= vf
-		#vn = vf
 
 	if hn<0.0: hn += 1.0
 	elif hn>1.0: hn -= 1.0
@@ -113,34 +109,57 @@ Unit tests
 import unittest
 from genimg import gen_hs
 from utils import load
+from random import random
 test_all = False
 
-class TestColorMods(unittest.TestCase):
+class PaletteTestBase(unittest.TestCase):
+	@classmethod
+	def load(cls, key):
+		img = load('orig/{}.jpg'.format(key))
+		cls.imgs[key] = img
+		cls.hsv[key] = rgb2hsv(img.getdata())
+		
 	@classmethod
 	def setUpClass(cls):
 		# store test images in dict
 		cls.imgs = {}
 		cls.hsv = {}
+		print 
+		logging.info('Init images')
 		# palette
 		img = gen_hs(1.0)
 		hsv_data = rgb2hsv(img.getdata())
 		cls.imgs['palette'] = img
 		cls.hsv['palette'] = hsv_data
-		# herbst
-		img = load('orig/herbst.jpg')
-		cls.imgs['herbst'] = img
-		cls.hsv['herbst'] = rgb2hsv(img.getdata())
-		# kueche
-		img = load('orig/kueche.jpg')
-		cls.imgs['kueche'] = img
-		cls.hsv['kueche'] = rgb2hsv(img.getdata())
-		# pond
-		img = load('orig/pond.jpg')
-		cls.imgs['pond'] = img
-		cls.hsv['pond'] = rgb2hsv(img.getdata())
-	
+		# load images
+		cls.load('herbst')
+		cls.load('kueche')
+		cls.load('karussel')
+		#cls.load('pond')
+		#cls.load('city')
+
+	def applyFilter(self):
+		print 'mapping ...'
+		tic = time()
+		hsv_new = adapt(self.hsv_data, self.filt)
+		toc = time()
+		dt = toc-tic
+		print '...done in {:.3f} secs'.format(dt)
+		self.render(hsv_new)
+		
+	def render(self, hsv_new):
+		print 'rendering...'
+		rgb_new = hsv2rgb(hsv_new)
+		newi = self.img.copy()
+		newi.putdata(rgb_new)
+		dists = [h-d for (h,d) in zip(self.filt.match, self.filt.distm)]
+		add_palettes(newi, self.filt.match, self.filt.hues, dists)
+		newi.show()
+
+
+class TestColorMods(PaletteTestBase):
 	def setUp(self):
-		img_key = 'palette'
+		img_key = 'karussel'
 		self.img = TestColorMods.imgs[img_key]
 		self.hsv_data = TestColorMods.hsv[img_key]
 		self.filt = Filter(8)
@@ -215,7 +234,18 @@ class TestColorMods(unittest.TestCase):
 		self.filt.hues = [0.1, 0.15, 0.3111, 0.4361, 0.5, 0.6861, 0.8111, 0.04]
 		self.filt.update()
 		logging.info('Set distm to %s', self.filt.distm)
-		self.filt.highlight_limit = 0.03
+		self.filt.highlight = True 
+		self.applyFilter()
+
+	'''
+	Test delta setting with single color
+	'''
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_delta_set_single(self):
+		self.filt.hues = [0.43]
+		self.filt.update()
+		logging.info('Set distm to %s', self.filt.distm)
+		self.filt.highlight = True 
 		self.applyFilter()
 
 	'''
@@ -223,21 +253,31 @@ class TestColorMods(unittest.TestCase):
 	'''
 	@unittest.skipUnless(test_all, 'test_all not set')
 	def test_delta_setting(self):
-		self.filt.hues = [0.4, 0.75]
+		self.filt.hues = [0.0, 1.0/3, 2.0/3]
 		self.filt.update()
 		logging.info('Set distm to %s', self.filt.distm)
-		self.filt.highlight_limit = 0.0
 		self.applyFilter()
 
 	'''
-	Test delta setting with fewer colors.
+	Test delta setting with palette.
 	'''
-	#@unittest.skipUnless(test_all, 'test_all not set')
-	def test_delta_setting(self):
-		(self.filt.hues,foo) = get_hues('herbst')
+	@unittest.skipUnless(test_all, 'test_all not set')
+	def test_delta_set_palette(self):
+		(self.filt.hues,foo) = get_hues('rgb')
 		self.filt.update()
 		logging.info('Set distm to %s', self.filt.distm)
-		self.filt.highlight_limit = 0.0
+		self.filt.highlight = False 
+		self.applyFilter()
+
+	'''
+	Test delta setting with randon palette.
+	'''
+	#@unittest.skipUnless(test_all, 'test_all not set')
+	def test_delta_set_random(self):
+		self.filt.hues = [random() for i in range(5)]
+		self.filt.update()
+		logging.info('Set distm to %s', self.filt.distm)
+		self.filt.highlight = False 
 		self.applyFilter()
 
 	# material not ready
@@ -253,28 +293,6 @@ class TestColorMods(unittest.TestCase):
 		img_prot.show()
 		filt.hues = hc
 		filt.update()
-		
-	'''
-	Test utilities
-	'''
-	def applyFilter(self):
-		print 'mapping ...'
-		tic = time()
-		hsv_new = adapt(self.hsv_data, self.filt)
-		toc = time()
-		dt = toc-tic
-		print '...done in {:.3f} secs'.format(dt)
-		self.render(hsv_new)
-		
-	def render(self, hsv_new):
-		print 'rendering...'
-		rgb_new = hsv2rgb(hsv_new)
-		newi = self.img.copy()
-		newi.putdata(rgb_new)
-		dists = [h-d for (h,d) in zip(self.filt.match, self.filt.distm)]
-		add_palettes(newi, self.filt.match, self.filt.hues, dists)
-		newi.show()
-	
 
 if __name__ == '__main__':
 	unittest.main()
