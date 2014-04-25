@@ -1,7 +1,7 @@
 import Image
 import ImageDraw
 from colorsys import hsv_to_rgb, rgb_to_hsv
-import pdb
+from pdb import set_trace
 import genimg
 from pals import pals
 
@@ -28,6 +28,7 @@ def _draw_palette_with_hues(hues, h=20):
 	Draw palettes with hue vector
 	Returns Image
 	"""
+	#set_trace()
 	width = 256
 	n = len(hues)
 	rgb = hues_to_rgb(hues)
@@ -146,13 +147,12 @@ def clust1d(dat, n, nc=200):
 
 if __name__=='__main__':
 	img = genimg.gen_3()
-	img = load('orig/green.jpg')
+	#img = load('orig/green.jpg')
 	rgb_data = img.getdata()
 	hsv_data = rgb2hsv(rgb_data)
-	hues = clust1d([x[0] for x in hsv_data], 64, 64)
+	#hues = clust1d([x[0] for x in hsv_data], 64, 64)
 	
-	#hues = [0.0, 0.2, 0.4, 0.6, 0.8]
-	c_img = draw_palette_with_hues(hues)
-	add_palette(img, c_img)
+	hues = [0.0, 0.2, 0.4, 0.6, 0.8, 0.82, 0.9, 0.99]
+	add_palettes(img, hues)
 	img.show()
 
