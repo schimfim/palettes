@@ -1,27 +1,48 @@
 import hues
 from genimg import gen_hs
 from time import time
+from logging import info
 
-nmap=64
+nmap=32
+maxn = 0
+focus = 0.4
 
-def _sample(hsv, hs_map, delta):
+def gen_linmap(n):
+	hor = [[float(x)/n for x in range(n)] for y in range(n)]
+	ver = [[float(y)/n for x in range(n)] for y in range(n)]
+	return (hor, ver)
+
+def _sample(hsv, hs_map):
+	global maxn
 	hn,sn,vn = hsv[0], hsv[1], hsv[2]
 	
 	# indices
 	hi = int(hn*(nmap-1))
 	si = int(sn*(nmap-1))
-	hs_map[hi][si] += delta*1000
+	hs_map[hi][si] += 1
+	maxn = max(maxn, hs_map[hi][si])
 	
 def analyse(hsv):
 	# setup map
-	hs_map = [[0.0 for i in range(nmap)] for j in range(nmap)]
+	hs_map = [[0 for i in range(nmap)] for j in range(nmap)]
 	
 	# sample data
 	for col in hsv:
-		_sample(col, hs_map, 1.0/len(hsv))
+		_sample(col, hs_map)
+	info('Max n: %d', maxn)
 	
 	# generate map hsv values
-	img = gen_hs(vmap=hs_map, nc=nmap)
+	vals = [[(float(v)/maxn)**focus for v in row] for row in hs_map]
+	img = gen_hs(vmap=vals, nc=nmap)
+	
+	# calc xform matrix
+	(hues, sats) = gen_linmap(nmap)
+	for i in range(nmap):
+		for j in range(nmap):
+			pass 
+	
+	# 
+	#xxx
 	
 	return img
 
@@ -48,7 +69,7 @@ class TestColorAnalysis(hues.PaletteTestBase):
 		img_new.show()
 		
 	def setUp(self):
-		img_key = 'kueche'
+		img_key = 'herbst'
 		self.img = hues.PaletteTestBase.imgs[img_key]
 		self.hsv_data = hues.PaletteTestBase.hsv[img_key]
 		self.filt = hues.Filter(8)
