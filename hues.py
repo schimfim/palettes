@@ -110,6 +110,7 @@ import unittest
 from genimg import gen_hs
 from utils import load
 from random import random
+from Image import new
 test_all = False
 
 class PaletteTestBase(unittest.TestCase):
@@ -134,6 +135,7 @@ class PaletteTestBase(unittest.TestCase):
 		# load images
 		cls.load('herbst')
 		cls.load('kueche')
+		cls.load('orig_08')
 		#cls.load('karussel')
 		#cls.load('pond')
 		#cls.load('city')
@@ -147,13 +149,15 @@ class PaletteTestBase(unittest.TestCase):
 		print '...done in {:.3f} secs'.format(dt)
 		self.render(hsv_new)
 		
-	def render(self, hsv_new):
+	def render(self, hsv_new, palette = True):
 		print 'rendering...'
 		rgb_new = hsv2rgb(hsv_new)
-		newi = self.img.copy()
+		# newi = self.img.copy() NEIN: behaelt alte Daten!
+		newi = new('RGB', (256,256))
 		newi.putdata(rgb_new)
-		dists = [h-d for (h,d) in zip(self.filt.match, self.filt.distm)]
-		add_palettes(newi, self.filt.match, self.filt.hues, dists)
+		if palette:
+			dists = [h-d for (h,d) in zip(self.filt.match, self.filt.distm)]
+			add_palettes(newi, self.filt.match, self.filt.hues, dists)
 		newi.show()
 
 
