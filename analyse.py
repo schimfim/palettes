@@ -6,8 +6,8 @@ from logging import info
 nmap=32
 maxn = 0
 focus = 0.4
-mu = 0.7
-niter = 50
+mu = 1.0
+niter = 20
 
 def gen_linmap(n):
 	ver = [[float(x)/n for x in range(n)] for y in range(n)]
@@ -30,13 +30,14 @@ def _update_xform(hues, sats, vals):
 		for j in range(1,nmap-1):
 			# hues
 			hue = hues[i][j]
-			dhue = ((hues[i-1][j]-hue)* vals[i-1][j] + (hues[i][j-1]-hue)* vals[i][j-1] + (hues[i+1][j]-hue)* vals[i+1][j] + (hues[i][j+1]-hue)* vals[i][j+1]) * mu
-			hues[i][j] += dhue
-			sumd += dhue
+			val = vals[i][j]
+			dhue = (hues[i-1][j]-hue)* max(0,vals[i-1][j]-val) + (hues[i][j-1]-hue)* max(0,vals[i][j-1]-val) + (hues[i+1][j]-hue)* max(0,vals[i+1][j]-val) + (hues[i][j+1]-hue)* max(0,vals[i][j+1]-val)
+			hues[i][j] += dhue * mu
+			sumd += dhue * mu
 			# sats
 			sat = sats[i][j]
-			dsat = ((sats[i-1][j]-sat)* vals[i-1][j] + (sats[i][j-1]-sat)* vals[i][j-1] + (sats[i+1][j]-sat)* vals[i+1][j] + (sats[i][j+1]-sat)* vals[i][j+1]) * mu
-			sats[i][j] += dsat
+			dsat = (sats[i-1][j]-sat)* max(0,vals[i-1][j]-val) + (sats[i][j-1]-sat)* max(0,vals[i][j-1]-val) + (sats[i+1][j]-sat)* max(0,vals[i+1][j]-val) + (sats[i][j+1]-sat)* max(0,vals[i][j+1]-val)
+			sats[i][j] += dsat * mu
 			
 	return sumd
 
@@ -57,11 +58,12 @@ def analyse(hsv):
 	(hues, sats) = gen_linmap(nmap)
 	for i in range(niter):
 		sumd = _update_xform(hues, sats, vals)
-		info('Update iteration %d, %f', i+1, sumd)
+		if (i+1) % 5 == 0:
+			info('Update iteration %d, %f', i+1, sumd)
 	
-	# image xform matrix
-	img = gen_hs(hmap=hues, smap=sats, nc=nmap, vmap=vals, v_def=1.0)
-	
+	# visualize xform matrix
+	#img = gen_hs(hmap=hues, smap=sats, nc=nmap, vmap=vals, v_def=1.0)
+	img = gen_hs(hmap=hues, smap=sats, nc=nmap, v_def=1.0)
 	return img
 
 '''
@@ -76,15 +78,6 @@ class TestColorAnalysis(hues.PaletteTestBase):
 	@classmethod
 	def setUpClass(cls):
 		hues.PaletteTestBase.setUpClass()
-
-	def applyFilter(self):
-		print 'analysing ...'
-		tic = time()
-		img_new = analyse(self.hsv_data)
-		toc = time()
-		dt = toc-tic
-		print '...done in {:.3f} secs'.format(dt)
-		img_new.show()
 		
 	def setUp(self):
 		img_key = 'herbst'
@@ -94,14 +87,10 @@ class TestColorAnalysis(hues.PaletteTestBase):
 
 	#@unittest.skipUnless(test_all, 'test_all not set')
 	def test_shift_hue(self):
-		self.filt.hues[4] = 0.0
-		self.filt.update()
-		self.applyFilter()
-
+		img_new = analyse(self.hsv_data)
+		img_new.show()
 
 #
 if __name__ == '__main__':
 	unittest.main()
-	#suite = unittest.TestLoader().loadTestsFromTestCase(TestColorAnalysis)
-	#unittest.TextTestRunner(verbosity = 1).run(suite)
 
