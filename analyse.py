@@ -6,6 +6,8 @@ from logging import info
 nmap=32
 maxn = 0
 focus = 0.4
+mu = 0.7
+niter = 50
 
 def gen_linmap(n):
 	ver = [[float(x)/n for x in range(n)] for y in range(n)]
@@ -21,7 +23,23 @@ def _sample(hsv, hs_map):
 	si = int(sn*(nmap-1))
 	hs_map[hi][si] += 1
 	maxn = max(maxn, hs_map[hi][si])
-	
+
+def _update_xform(hues, sats, vals):
+	sumd = 0.0
+	for i in range(1,nmap-1):
+		for j in range(1,nmap-1):
+			# hues
+			hue = hues[i][j]
+			dhue = ((hues[i-1][j]-hue)* vals[i-1][j] + (hues[i][j-1]-hue)* vals[i][j-1] + (hues[i+1][j]-hue)* vals[i+1][j] + (hues[i][j+1]-hue)* vals[i][j+1]) * mu
+			hues[i][j] += dhue
+			sumd += dhue
+			# sats
+			sat = sats[i][j]
+			dsat = ((sats[i-1][j]-sat)* vals[i-1][j] + (sats[i][j-1]-sat)* vals[i][j-1] + (sats[i+1][j]-sat)* vals[i+1][j] + (sats[i][j+1]-sat)* vals[i][j+1]) * mu
+			sats[i][j] += dsat
+			
+	return sumd
+
 def analyse(hsv):
 	# setup map
 	hs_map = [[0 for i in range(nmap)] for j in range(nmap)]
@@ -33,16 +51,16 @@ def analyse(hsv):
 	
 	# generate map hsv values
 	vals = [[(float(v)/maxn)**focus for v in row] for row in hs_map]
-	img = gen_hs(vmap=vals, nc=nmap)
+	#img = gen_hs(vmap=vals, nc=nmap)
 	
 	# calc xform matrix
 	(hues, sats) = gen_linmap(nmap)
-	for i in range(nmap):
-		for j in range(nmap):
-			pass 
+	for i in range(niter):
+		sumd = _update_xform(hues, sats, vals)
+		info('Update iteration %d, %f', i+1, sumd)
 	
-	# 
-	img = gen_hs(hmap=hues, smap=sats, vmap=vals, nc=nmap)
+	# image xform matrix
+	img = gen_hs(hmap=hues, smap=sats, nc=nmap, vmap=vals, v_def=1.0)
 	
 	return img
 
