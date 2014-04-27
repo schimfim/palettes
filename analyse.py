@@ -8,8 +8,8 @@ maxn = 0
 focus = 0.4
 
 def gen_linmap(n):
-	hor = [[float(x)/n for x in range(n)] for y in range(n)]
-	ver = [[float(y)/n for x in range(n)] for y in range(n)]
+	ver = [[float(x)/n for x in range(n)] for y in range(n)]
+	hor = [[float(y)/n for x in range(n)] for y in range(n)]
 	return (hor, ver)
 
 def _sample(hsv, hs_map):
@@ -42,7 +42,7 @@ def analyse(hsv):
 			pass 
 	
 	# 
-	#xxx
+	img = gen_hs(hmap=hues, smap=sats, vmap=vals, nc=nmap)
 	
 	return img
 
