@@ -5,10 +5,14 @@ from pdb import set_trace
 import genimg
 from pals import pals
 
+def square(img, size):
+	return img.resize(size)
+
 def load(filename, size=(256,256), thumbnail=True):
 	img = Image.open(filename)
 	if thumbnail:
 		img.thumbnail(size, Image.ANTIALIAS)
+	img = square(img, size)
 	return img
 
 def hues_to_rgb(hues):
@@ -146,8 +150,8 @@ def clust1d(dat, n, nc=200):
 	return [ci['mean'] for ci in c]
 
 if __name__=='__main__':
-	img = genimg.gen_3()
-	#img = load('orig/green.jpg')
+	#img = genimg.gen_3()
+	img = load('orig/karussel.jpg')
 	rgb_data = img.getdata()
 	hsv_data = rgb2hsv(rgb_data)
 	#hues = clust1d([x[0] for x in hsv_data], 64, 64)
