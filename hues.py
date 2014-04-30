@@ -119,7 +119,13 @@ class PaletteTestBase(unittest.TestCase):
 		img = load('orig/{}.jpg'.format(key))
 		cls.imgs[key] = img
 		cls.hsv[key] = rgb2hsv(img.getdata())
-		
+	
+	@classmethod
+	def get_hsv(cls, key):
+		if key not in cls.hsv:
+			cls.load(key)
+		return cls.hsv[key]
+	
 	@classmethod
 	def setUpClass(cls):
 		# store test images in dict
@@ -133,9 +139,9 @@ class PaletteTestBase(unittest.TestCase):
 		cls.imgs['palette'] = img
 		cls.hsv['palette'] = hsv_data
 		# load images
-		cls.load('herbst')
-		cls.load('kueche')
-		cls.load('orig_08')
+		#cls.load('herbst')
+		#cls.load('kueche')
+		#cls.load('orig_08')
 		#cls.load('karussel')
 		#cls.load('pond')
 		#cls.load('city')
