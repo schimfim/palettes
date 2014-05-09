@@ -1,52 +1,42 @@
-import palettes
-import Image
-from pals import pals
-import time
+from pprint import pprint
 
-# algo params
-slope = 20.0 # small=large impact
-palettes.xf = 1.0
-palettes.defcol = (0.0,0.0,0.0)
-palettes.normalize = True
+mu = 0.5
 
-# config
-palettes.stats = False
-palettes.thumbnail = True
-size = (256,256)
+def cum_dist(freq):
+	cd = []
+	sumf = 0
+	for x in freq:
+		sumf += x
+		cd.append(sumf)
+	return cd
 
-imgs = palettes.load_all('orig',size)
-imgs = [imgs[1]]
-pnam = 'bunt'
-ps = pals[pnam]
-pal_img = palettes.draw_palette({pnam:ps})
-out = None 
+def gen_row(freq):
+	cd = cum_dist(freq)
+	sf = sum(cd)
+	row = [x/sf for x in cd]
+	return row
 
-start_time = time.strftime('%Y-%m-%d_%H:%M')
-prefix = ''
-folder = 'out'
-fname_base = prefix + 'img_{}_{}_'.format(start_time, pnam)
+def field(sats, freq):
+	n = len(sats)
+	fld = [0.0] * n
+	new_fq = [0.0] * n
+	sats.insert(0,0.0)
+	sats.append(0.0)
+	freq.insert(0,0.0)
+	freq.append(0.0)
+	for i in range(1,n+1):
+		fld[i-1] = (mu*sats[i-1]*freq[i-1] + sats[i]*freq[i] + mu*sats[i+1]*freq[i+1]) / (mu*freq[i-1] + freq[i] + mu*freq[i+1])
+		new_fq[i-1] = (mu*freq[i-1] + freq[i] + mu*freq[i+1]) / (1+2*mu)
+	
+	return fld, new_fq
 
-def start():
-	global out #?
-	out_imgs = []
-	for nperc in [0.02]:
-		for gain in [0.2]:
-			for i,ims in enumerate(imgs):
-				focus = palettes.analyse(ims, ps, gain=gain, nperc=nperc)
-				out = palettes.adapt(ims, ps, slope, focus)
 
-				palettes.add_palette(out, pal_img)
-				param_str = 'np={:.2f} gn={:.2f} sl={:.1f} nm={}'.format(nperc, gain, slope, palettes.normalize)
-				param_str2 = 'xf={:.2f} dc={}'.format(palettes.xf, palettes.defcol)
-				print param_str
-
-				palettes.add_caption(out, param_str, param_str2)
-				out_imgs.append(out)
-		
-	palettes.save_all(out_imgs,folder, fname_base)
 
 if __name__ == '__main__':
-	import cProfile
-	#cProfile.run('start()')
-	start()
-
+	sats = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+	freq = [0.2, 0.3, 0.9, 0.4, 0.6, 0.2]
+	#freq = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+	
+	r = gen_row(freq)
+	cd = [round(x,2) for x in r]
+	print cd
