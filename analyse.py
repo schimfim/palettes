@@ -4,15 +4,15 @@ from logging import info
 import copy
 
 # analysis params
-nmap = 16
+nmap = 32
 maxn = 0
 focus = 0.4
-limit = 0.8
+limit = 0.0
 dmax = 0.3
 # training params
 emph = 1.0
-mu = 0.1
-niter = 50
+mu = 0.7
+niter = 200
 dlimit = 0
 
 
@@ -112,21 +112,21 @@ def _update_xform(hues, sats, vals):
 			jp1 = (j + 1) % nmap
 			im1 = max(i - 1, 0)
 			ip1 = min(i + 1, nmap-1)
-			dhue = (hues[im1][j]-hue)* act(vals[im1][j]-val) + (hues[i][jm1]-hue)* act(vals[i][jm1]-val) + (hues[ip1][j]-hue)* act(vals[ip1][j]-val) + (hues[i][jp1]-hue)* act(vals[i][jp1]-val)
+			dhue = (hues[im1][j]-hue)*vals[im1][j] + (hues[i][jm1]-hue)*vals[i][jm1] + (hues[ip1][j]-hue)*vals[ip1][j] + (hues[i][jp1]-hue)*vals[i][jp1]
 
-			new_hues[i][j] += dhue * mu
-			sumd += dhue * mu
+			new_hues[i][j] += (1-vals[i][j]) * dhue * mu
+			sumd += dhue * mu * (1-vals[i][j])
 			# sats
 			jm1 = max(j - 1, 0)  # Bei saturation rotiert Spalte nicht!
 			jp1 = min(j + 1, nmap-1)
 			sat = sats[i][j]
-			dsat = (sats[im1][j]-sat)* act(vals[im1][j]-val) + (sats[i][jm1]-sat)* act(vals[i][jm1]-val) + (sats[ip1][j]-sat)* act(vals[ip1][j]-val) + (sats[i][jp1]-sat)* act(vals[i][jp1]-val)
+			dsat = (sats[im1][j]-sat)*vals[im1][j] + (sats[i][jm1]-sat)*vals[i][jm1] + (sats[ip1][j]-sat)*vals[ip1][j] + (sats[i][jp1]-sat)*vals[i][jp1]
 
-			new_sats[i][j] += dsat * mu
+			new_sats[i][j] += dsat * mu * (1-vals[i][j])
 			
 	return new_hues, new_sats, sumd
 
-def _xform(hsv, hues, sats):
+def _xform(hsv, hues, sats, hilite=False):
 	hn,sn,vn = hsv[0], hsv[1], hsv[2]
 
 	# indices
@@ -134,6 +134,10 @@ def _xform(hsv, hues, sats):
 	si = int(round(sn*(nmap-1)))
 	hue = hues[hi][si]
 	sat = sats[hi][si]
+	
+	if hilite:
+		d = ((hue-hn)**2 + (sat-sn)**2)**0.5 / 2**0.5
+		vn = d*nmap/4
 
 	return (hue, sat, vn)
 
@@ -159,15 +163,16 @@ def _xform_vals(hsv, vals):
 
 def train_map(vals):
 	(hues, sats) = gen_linmap(nmap)
+	info('Start training')
 	for i in range(niter):
 		hues, sats, sumd = _update_xform(hues, sats, vals)
-		if (i+1) % 5 == 0:
+		if (i+1) % 10 == 0:
 			info('Update iteration %d, %f', i+1, sumd)
 		if abs(sumd) < float(dlimit)/nmap: break
 	return hues, sats
 
-def adapt(hsv, hues, sats, xfct=_xform):
-	hsv_new = [xfct(c, hues, sats) for c in hsv]
+def adapt(hsv, hues, sats, xfct=_xform, hilite=False):
+	hsv_new = [xfct(c, hues, sats, hilite) for c in hsv]
 
 	return hsv_new
 
@@ -193,7 +198,7 @@ class TestColorAnalysis(hues.PaletteTestBase):
 	def setUp(self):
 		self.hsv_data = hues.PaletteTestBase.get_hsv('herbst')
 		self.hsv_palette = hues.PaletteTestBase.get_hsv('palette')
-		self.hsv_test = hues.PaletteTestBase.get_hsv('karussel')
+		self.hsv_test = hues.PaletteTestBase.get_hsv('kueche')
 
 
 	@unittest.skipUnless(test_all, 'test_all not set')
@@ -274,7 +279,7 @@ class TestColorAnalysis(hues.PaletteTestBase):
 	'''
 	Foto modifiziert
 	'''
-	#@unittest.skipUnless(test_all, 'test_all not set')
+	@unittest.skipUnless(test_all, 'test_all not set')
 	def test_adapt_img(self):
 		vals = create_histogram(self.hsv_data)
 		ext = extrema(vals)
@@ -290,7 +295,26 @@ class TestColorAnalysis(hues.PaletteTestBase):
 		self.render(hsv_new, palette=False)
 
 	'''
-	Foto mit highlights
+	Foto modifiziert, Aenderungen hervorheben
+	'''
+	#@unittest.skipUnless(test_all, 'test_all not set')
+	def test_highlight_changes(self):
+		vals = create_histogram(self.hsv_data)
+		ext = extrema(vals)
+		(hues, sats) = train_map(ext)
+
+		# show map
+		img = gen_hs(hmap=hues, smap=sats, nc=nmap, v_def=1.0)
+		img.show()
+
+		# adapt test image
+		hsv_new = adapt(self.hsv_test, hues, sats, hilite=True )
+
+		self.render(hsv_new, palette=False)
+		
+		
+	'''
+	Foto mit Hauptfarben hervorgehoben
 	'''
 	@unittest.skipUnless(test_all, 'test_all not set')
 	def test_highlight_palette(self):
