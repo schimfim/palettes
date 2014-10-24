@@ -17,8 +17,10 @@ from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 import np1d
 import logging as log
 
-thbsize = (384,384)
+thbsize = (512,512)
 hdsize = (1500,1500)
+just_rgb = False 
+chain = False 
 
 # model
 global md
@@ -26,7 +28,7 @@ md = dict(orig_img=None,
                     orig_ary=None,
                     filt_img=None,
                     filt_ary=None,
-                    bal=0.5
+                    bal=(0.5,0.5,0.5)
                     )
 
 def uiimg_from_array(ary):
@@ -49,6 +51,14 @@ def open_action(sender):
 	print md['hd_img'].size
 	md['orig_ary'] = np.asarray(img)/255.0
 	md['orig_img'] = uiimg_from_array(md['orig_ary'])
+	# calc input profile
+	if just_rgb:
+		out_hsv = md['orig_ary']
+	else: 
+		out_hsv = rgb_to_hsv(md['orig_ary'])
+	(out_maps, iout_maps) = np1d.gen_maps(out_hsv)
+	#iout_maps!
+	md['iout_maps'] = out_maps
 	# update ui
 	img_view = v['theImage']
 	img_view.image = md['orig_img']
@@ -65,8 +75,11 @@ def add_filter(sender):
 	ary = np.asarray(img)/255.0
 	uiimg = uiimg_from_array(ary)
 	
-	hsv = rgb_to_hsv(ary)
-	maps = np1d.gen_maps(hsv)
+	if just_rgb:
+		hsv = ary
+	else: 
+		hsv = rgb_to_hsv(ary)
+	(maps, foo) = np1d.gen_maps(hsv)
 	#plt.show()
 	
 	cells = v['tableview1'].data_source.items
@@ -80,9 +93,17 @@ def apply_filter():
 	if md['orig_ary'] is None:
 		return
 	v['activity'].start()
-	hsv = rgb_to_hsv(md['orig_ary'])
-	hsv_filt = np1d.apply_maps(hsv, md['maps'], md['bal'])
-	rgb = hsv_to_rgb(hsv_filt)
+	if just_rgb:
+		hsv = md['orig_ary']
+	else: 
+		hsv = rgb_to_hsv(md['orig_ary'])
+	hsv_filt = np1d.apply_maps(hsv, md['maps2'], md['bal'])
+	if just_rgb:
+		rgb = hsv_filt
+	else: 
+		rgb = hsv_to_rgb(hsv_filt)
+		#CUT
+		#rgb = hsv_filt
 	uiimg = uiimg_from_array(rgb)
 	
 	md['filt_ary'] = rgb
@@ -97,10 +118,15 @@ def apply_filter_hd():
 	global md
 	ary = np.asarray(md['hd_img'])/255.0
 	print ary.shape
-	hsv = rgb_to_hsv(ary)
-	hsv_filt = np1d.apply_maps(hsv, md['maps'], md['bal'])
-	rgb = hsv_to_rgb(hsv_filt) * 255
-	# test rgb = hsv_to_rgb(hsv) * 255
+	if just_rgb:
+		hsv = ary
+	else: 
+		hsv = rgb_to_hsv(ary)
+	hsv_filt = np1d.apply_maps(hsv, md['maps2'], md['bal'])
+	if just_rgb:
+		rgb = hsv_filt * 255
+	else: 
+		rgb = hsv_to_rgb(hsv_filt) * 255
 	img = Image.fromarray(rgb.astype(np.uint8, copy=False))
 	return img
 
@@ -108,13 +134,40 @@ def apply_filter_hd():
 def filter_action(sender):
 	global md
 	cell = sender.items[sender.selected_row]
-	md['maps'] = cell['maps']
+	maps = cell['maps']
+	iout_maps = md['iout_maps']
+	if chain:
+		maps2 = np1d.chain_maps(iout_maps, maps)
+	else:
+		maps2 = maps
+	
+	# 
+	plt.clf()
+	plt.plot(maps2.T)
+	plt.show()
+	plt.clf()
+	
+	md['maps'] = maps
+	md['maps2'] = maps2
 	apply_filter()
 
 def slider_action(sender):
 	global md
-	md['bal'] = v['slider1'].value
+	val1 = v['slider1'].value
+	if v['switch1'].value:
+		val2 = v['slider2'].value
+		val3 = v['slider3'].value
+	else: 
+		val2 = val1
+		val3 = val1
+	#md['bal'] = (val1**3,val2**2,val3)
+	md['bal'] = (val1,val2,val3)
 	apply_filter()
+
+def switch_action(sender):
+	det = v['switch1'].value
+	v['slider2'].hidden = not det
+	v['slider3'].hidden = not det
 
 @ui.in_background
 def save_action(sender):
@@ -181,6 +234,7 @@ load_filters(cells)
 
 # init slider
 slider_action(v['slider1'])
+switch_action(v['switch1'])
 
 # run
 v.present()
