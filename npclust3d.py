@@ -12,8 +12,8 @@ gain = 0.0
 plot = True 
 lense = False    
 
-in_img = 'orig/karussel.jpg'
-out_img = 'orig/kueche.jpg'
+in_img = 'orig/leaves.jpg'
+out_img = 'orig/leaves.jpg'
 
 N3 = N**3
 
@@ -91,28 +91,28 @@ def calcCube(ary, minh, dmax, dhmin):
 	rts = np.resize(rs, (N**3, l)).T
 	rtv = np.resize(rv, (N**3, l)).T
 	# tiled reduced frequencies LxN^3
-	hth = np.resize(rh, (N**3, l)).T
-	hts = np.resize(rs, (N**3, l)).T
-	htv = np.resize(rv, (N**3, l)).T
+	hhist = np.resize(hist[hist>=minh], (N**3, l)).T
 
 	# distance matrix LxN^3
 	hdist = np.square(rth-fth)
 	sdist = np.square(rts-fts)
 	vdist = np.square(rtv-ftv)
-	dist = np.sqrt(hdist+sdist+vdist)
+	dist = np.sqrt((hdist+sdist+vdist)/3.0)
 
-	min_idx = np.argmin(dist, 0)
+	hdist = (1-dist) *  hhist
+
+	min_idx = np.argmax(hdist, 0)
 
 	# weigh color with min distance
 	# simple: wt=1:orig wt=0:filt
 	#min_dist = np.power(np.amin(dist, 0) / sqrt(3.0), 2.0)
-	wd = np.sign(dmax-np.amin(dist, 0))/2+0.5
+	wd = np.sign(dmax-np.amax(hdist, 0))/2+0.5
 	#wh = np.sign(hist.flatten()-dhmin)/2+0.5
 	# (cos(x^2*pi)/2+0.5)^4
 	wh = np.power(np.cos(np.power(hist.flatten(),2.0)*pi)/2.0+0.5, 4.0)
-	mu = wh # membership (1=filter,0=orig)
-	nu = 1-mu
-	mu=1
+	mu = np.amax(hdist,0) # membership (1=filter,0=orig)
+	nu = 0
+
 	chue = rh[min_idx]*mu + mh.flatten()*nu * gain
 	csat = rs[min_idx]*mu + ms.flatten()*nu * gain
 	if not lense:
