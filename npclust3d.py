@@ -12,7 +12,7 @@ gain = 0.0
 plot = True 
 lense = False    
 
-in_img = 'orig/pond.jpg'
+in_img = 'orig/karussel.jpg'
 out_img = 'orig/kueche.jpg'
 
 N3 = N**3
@@ -51,13 +51,13 @@ def calcCube(ary, minh, dmax, dhmin):
 	hist, edges = np.histogramdd(hsv, bins=(N,N,N), normed=False )
 	hist = hist / np.max(hist)
 	if plot:
-		plt.hist(hist.flatten())
+		plt.hist(hist.flatten(),log=False)
 		plt.show(); plt.clf()
 
 	#pdb.set_trace()
 
 	# full hsv meshes NxNxN
-	ax = np.arange(0.0, 1.0, 1.0/N, dtype=np.float16)
+	ax = np.arange(0.0, 1.0, 1.0/N)
 	mh,ms,mv = np.meshgrid(ax,ax,ax)
 
 	hh,ss,vv = mh,ms,mv
@@ -86,11 +86,14 @@ def calcCube(ary, minh, dmax, dhmin):
 	fth = np.resize(mh,(l,N**3))
 	fts = np.resize(ms,(l,N**3))
 	ftv = np.resize(mv,(l,N**3))
-	#fts = np.tile(np.reshape(ms,N**3),(l,1))
 	# tiled reduced meshes LxN^3
 	rth = np.resize(rh, (N**3, l)).T
 	rts = np.resize(rs, (N**3, l)).T
 	rtv = np.resize(rv, (N**3, l)).T
+	# tiled reduced frequencies LxN^3
+	hth = np.resize(rh, (N**3, l)).T
+	hts = np.resize(rs, (N**3, l)).T
+	htv = np.resize(rv, (N**3, l)).T
 
 	# distance matrix LxN^3
 	hdist = np.square(rth-fth)
@@ -148,7 +151,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 	# minh, dmax, dhmin
-	(cube, nc) = calcCube(ary, 0.0, 0.0, 0.0)
+	(cube, nc) = calcCube(ary, 0.1, 0.0, 0.0)
 	print 'cents=', nc
 
 	#
