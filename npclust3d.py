@@ -1,24 +1,20 @@
 import numpy as np, Image
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 import  matplotlib.pyplot as plt
-from math import ceil, sqrt, pi
-import pdb; __b = pdb.set_trace
+from math import ceil, sqrt
+import pdb
+def __b():
+	if debug:
+		pdb.set_trace()
 
 # TODO:
 # anzahl center vorgeben (ok)
-# k nearest neighbor
+# k nearest neighbor (ok)
 # check meshgrid indexing
 
 N = 8
-#minh = 0.05 # min freq in histogram
-#dmax = 0.8 # max dist from nearest neighbr
-#dhmin = 0.0 # min freq of nearest neighbr
-gain = 0.0
 plot = True 
-lense = False    
-
-in_img = 'orig/pond.jpg'
-out_img = 'orig/kueche.jpg'
+debug = False
 
 N3 = N**3
 
@@ -43,7 +39,7 @@ def plot_cube2d(h,s,v,align=None):
 	plt.clf()
 
 # 
-def calcCube(ary, hperc, dmax, dhmin):
+def calcCube(ary, top_h_perc, nbrs):
 	# get hue and saturation
 	hsv = rgb_to_hsv(ary)
 	hsv = np.reshape(hsv, (-1,3))
@@ -57,10 +53,8 @@ def calcCube(ary, hperc, dmax, dhmin):
 		
 	# reduce histogram
 	hidx = np.argsort(hist, axis=None)
-	hidx=hidx[450:]
+	hidx=hidx[(N3-N3*top_h_perc):]
 	rhist = hist.flatten()[hidx]
-
-	#pdb.set_trace()
 
 	# full hsv meshes NxNxN
 	ax = np.arange(0.0, 1.0, 1.0/N)
@@ -68,28 +62,11 @@ def calcCube(ary, hperc, dmax, dhmin):
 
 	hh,ss,vv = mh.flatten(),ms.flatten(),mv.flatten()
 	mh,ms,mv = ss,hh,vv #shv
-
-	# hsv o
-	# hvs -
-	# shv +
-	# svh -
-	# vhs -
-	# vsh -
-
-	# show pure cube
-	#plot_cube2d(mh,ms,mv, 16)
-
 	# reduces hsv meshes sized 1xL
-	#perc = np.percentile(mh.flatten(),minh)
-	#print 'perc=', perc
 	rh = mh[hidx]
 	rs = ms[hidx]
 	rv = mv[hidx]
 	l = (rh.shape)[0]
-
-	# show cents
-	#plot_cube2d(rh,rs,rv)
-
 	# full tiled meshes LxN^3
 	fth = np.resize(mh,(l,N**3))
 	fts = np.resize(ms,(l,N**3))
@@ -98,49 +75,22 @@ def calcCube(ary, hperc, dmax, dhmin):
 	rth = np.resize(rh, (N**3, l)).T
 	rts = np.resize(rs, (N**3, l)).T
 	rtv = np.resize(rv, (N**3, l)).T
-	# tiled reduced frequencies LxN^3
-	#hm = hist[hist>=perc]
-	#hhist = np.resize(hm, (N**3, l)).T
-
 	# distance matrix LxN^3
 	hdist = np.square(rth-fth)
 	sdist = np.square(rts-fts)
 	vdist = np.square(rtv-ftv)
 	dist = np.sqrt((hdist+sdist+vdist)/3.0)
-
-	#hdist = (1-dist) #* (hhist)
-	#pdb.set_trace()
+	# knn
 	min_idx = np.argsort(dist, 0)
-	min_idx=min_idx[0:5]
-	idist = 1 / (dist[min_idx,:] + 0.00001)
+	min_idx = min_idx[0:nbrs]
+	min_dist = np.sort(dist,0)[0:nbrs,:]
+	idist = 1 / (min_dist + 0.00001)
 	sum_idist = np.sum(idist, 0)
 	mudist = idist / sum_idist
 	__b()
-
-	#pdb.set_trace()
-
-	# weigh color with min distance
-	# simple: wt=1:orig wt=0:filt
-	#min_dist = np.power(np.amin(dist, 0) / sqrt(3.0), 2.0)
-	#wd = np.sign(dmax-np.amax(hdist, 0))/2+0.5
-	#wh = np.sign(hist.flatten()-dhmin)/2+0.5
-	# (cos(x^2*pi)/2+0.5)^4
-	#wh = np.power(np.cos(np.power(hist.flatten(),2.0)*pi)/2.0+0.5, 4.0)
-	# membership (1=filter,0=orig)
-	mu = 1 #np.amax(hdist,0)
-	nu = 0
-	
-	cmean = np.mean(rh[min_idx], axis=0)
-	smean = np.mean(rs[min_idx], axis=0)
-	vmean = np.mean(rv[min_idx], axis=0)
-	#__b()
-	chue = cmean*mu + mh*nu * gain
-	csat = smean*mu + ms*nu * gain
-	if not lense:
-		cval = vmean * mu + mv*nu * gain
-	else: 
-		#cval = np.power(hist.flatten(), 0.2)
-		cval = mu
+	chue = np.mean(rh[min_idx], axis=0)
+	csat = np.mean(rs[min_idx], axis=0)
+	cval = np.mean(rv[min_idx], axis=0)
 	cubeh = chue.reshape(N,N,N)
 	cubes = csat.reshape(N,N,N)
 	cubev = cval.reshape(N,N,N)
@@ -166,13 +116,15 @@ def applyCube(ary, cube):
 	return out
 
 if __name__=='__main__':
+	in_img = 'orig/pond.jpg'
+	out_img = 'orig/kueche.jpg'
 	#
 	# input image
 	img = Image.open(in_img)
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 	# minh, dmax, dhmin
-	(cube, nc) = calcCube(ary, 20, 0.0, 0.0)
+	(cube, nc) = calcCube(ary, 0.05, 3)
 	print 'cents=', nc
 
 	#
