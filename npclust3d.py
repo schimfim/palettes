@@ -4,6 +4,11 @@ import  matplotlib.pyplot as plt
 from math import ceil, sqrt, pi
 import pdb
 
+# TODO:
+# anzahl center vorgeben (ok, ueber percentile)
+# k nearest neighbor
+# check meshgrid indexing
+
 N = 8
 #minh = 0.05 # min freq in histogram
 #dmax = 0.8 # max dist from nearest neighbr
@@ -12,8 +17,8 @@ gain = 0.0
 plot = True 
 lense = False    
 
-in_img = 'orig/leaves.jpg'
-out_img = 'orig/leaves.jpg'
+in_img = 'orig/pond.jpg'
+out_img = 'orig/kueche.jpg'
 
 N3 = N**3
 
@@ -38,11 +43,7 @@ def plot_cube2d(h,s,v,align=None):
 	plt.clf()
 
 # 
-def calcCube(ary, minh, dmax, dhmin):
-	# norm parameters
-	#minh = minh / (N**3)
-	#dhmin = dhmin / (N**3)
-	
+def calcCube(ary, hperc, dmax, dhmin):
 	# get hue and saturation
 	hsv = rgb_to_hsv(ary)
 	hsv = np.reshape(hsv, (-1,3))
@@ -51,8 +52,13 @@ def calcCube(ary, minh, dmax, dhmin):
 	hist, edges = np.histogramdd(hsv, bins=(N,N,N), normed=False )
 	hist = hist / np.max(hist)
 	if plot:
-		plt.hist(hist.flatten(),log=False)
+		plt.hist(hist.flatten(),log=False, bins=25)
 		plt.show(); plt.clf()
+		
+	# reduce histogram
+	hidx = np.argsort(hist, axis=None)
+	hidx=hidx[450:]
+	rhist = hist.flatten()[hidx]
 
 	#pdb.set_trace()
 
@@ -60,7 +66,7 @@ def calcCube(ary, minh, dmax, dhmin):
 	ax = np.arange(0.0, 1.0, 1.0/N)
 	mh,ms,mv = np.meshgrid(ax,ax,ax)
 
-	hh,ss,vv = mh,ms,mv
+	hh,ss,vv = mh.flatten(),ms.flatten(),mv.flatten()
 	mh,ms,mv = ss,hh,vv #shv
 
 	# hsv o
@@ -74,9 +80,11 @@ def calcCube(ary, minh, dmax, dhmin):
 	#plot_cube2d(mh,ms,mv, 16)
 
 	# reduces hsv meshes sized 1xL
-	rh = mh[hist>=minh]
-	rs = ms[hist>=minh]
-	rv = mv[hist>=minh]
+	#perc = np.percentile(mh.flatten(),minh)
+	#print 'perc=', perc
+	rh = mh[hidx]
+	rs = ms[hidx]
+	rv = mv[hidx]
 	l = (rh.shape)[0]
 
 	# show cents
@@ -91,7 +99,8 @@ def calcCube(ary, minh, dmax, dhmin):
 	rts = np.resize(rs, (N**3, l)).T
 	rtv = np.resize(rv, (N**3, l)).T
 	# tiled reduced frequencies LxN^3
-	hhist = np.resize(hist[hist>=minh], (N**3, l)).T
+	#hm = hist[hist>=perc]
+	#hhist = np.resize(hm, (N**3, l)).T
 
 	# distance matrix LxN^3
 	hdist = np.square(rth-fth)
@@ -99,24 +108,27 @@ def calcCube(ary, minh, dmax, dhmin):
 	vdist = np.square(rtv-ftv)
 	dist = np.sqrt((hdist+sdist+vdist)/3.0)
 
-	hdist = (1-dist) *  hhist
-
-	min_idx = np.argmax(hdist, 0)
+	#hdist = (1-dist) #* (hhist)
+	#pdb.set_trace()
+	min_idx = np.argsort(dist, 0)
+	min_idx=min_idx[-3:]
+	pdb.set_trace()
 
 	# weigh color with min distance
 	# simple: wt=1:orig wt=0:filt
 	#min_dist = np.power(np.amin(dist, 0) / sqrt(3.0), 2.0)
-	wd = np.sign(dmax-np.amax(hdist, 0))/2+0.5
+	#wd = np.sign(dmax-np.amax(hdist, 0))/2+0.5
 	#wh = np.sign(hist.flatten()-dhmin)/2+0.5
 	# (cos(x^2*pi)/2+0.5)^4
-	wh = np.power(np.cos(np.power(hist.flatten(),2.0)*pi)/2.0+0.5, 4.0)
-	mu = np.amax(hdist,0) # membership (1=filter,0=orig)
+	#wh = np.power(np.cos(np.power(hist.flatten(),2.0)*pi)/2.0+0.5, 4.0)
+	# membership (1=filter,0=orig)
+	mu = np.amax(hdist,0)
 	nu = 0
 
-	chue = rh[min_idx]*mu + mh.flatten()*nu * gain
-	csat = rs[min_idx]*mu + ms.flatten()*nu * gain
+	chue = rh[min_idx]*mu + mh*nu * gain
+	csat = rs[min_idx]*mu + ms*nu * gain
 	if not lense:
-		cval = rv[min_idx] * mu + mv.flatten() * nu * gain
+		cval = rv[min_idx] * mu + mv*nu * gain
 	else: 
 		#cval = np.power(hist.flatten(), 0.2)
 		cval = mu
@@ -151,7 +163,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 	# minh, dmax, dhmin
-	(cube, nc) = calcCube(ary, 0.1, 0.0, 0.0)
+	(cube, nc) = calcCube(ary, 20, 0.0, 0.0)
 	print 'cents=', nc
 
 	#
