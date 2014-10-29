@@ -111,7 +111,12 @@ def calcCube(ary, hperc, dmax, dhmin):
 	#hdist = (1-dist) #* (hhist)
 	#pdb.set_trace()
 	min_idx = np.argsort(dist, 0)
-	min_idx=min_idx[-3:]
+	min_idx=min_idx[0:5]
+	idist = 1 / (dist[min_idx,:] + 0.00001)
+	sum_idist = np.sum(idist, 0)
+	mudist = idist / sum_idist
+	__b()
+
 	#pdb.set_trace()
 
 	# weigh color with min distance
@@ -128,7 +133,7 @@ def calcCube(ary, hperc, dmax, dhmin):
 	cmean = np.mean(rh[min_idx], axis=0)
 	smean = np.mean(rs[min_idx], axis=0)
 	vmean = np.mean(rv[min_idx], axis=0)
-	__b()
+	#__b()
 	chue = cmean*mu + mh*nu * gain
 	csat = smean*mu + ms*nu * gain
 	if not lense:
