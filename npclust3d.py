@@ -2,10 +2,10 @@ import numpy as np, Image
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 import  matplotlib.pyplot as plt
 from math import ceil, sqrt, pi
-import pdb
+import pdb; __b = pdb.set_trace
 
 # TODO:
-# anzahl center vorgeben (ok, ueber percentile)
+# anzahl center vorgeben (ok)
 # k nearest neighbor
 # check meshgrid indexing
 
@@ -112,7 +112,7 @@ def calcCube(ary, hperc, dmax, dhmin):
 	#pdb.set_trace()
 	min_idx = np.argsort(dist, 0)
 	min_idx=min_idx[-3:]
-	pdb.set_trace()
+	#pdb.set_trace()
 
 	# weigh color with min distance
 	# simple: wt=1:orig wt=0:filt
@@ -122,13 +122,17 @@ def calcCube(ary, hperc, dmax, dhmin):
 	# (cos(x^2*pi)/2+0.5)^4
 	#wh = np.power(np.cos(np.power(hist.flatten(),2.0)*pi)/2.0+0.5, 4.0)
 	# membership (1=filter,0=orig)
-	mu = np.amax(hdist,0)
+	mu = 1 #np.amax(hdist,0)
 	nu = 0
-
-	chue = rh[min_idx]*mu + mh*nu * gain
-	csat = rs[min_idx]*mu + ms*nu * gain
+	
+	cmean = np.mean(rh[min_idx], axis=0)
+	smean = np.mean(rs[min_idx], axis=0)
+	vmean = np.mean(rv[min_idx], axis=0)
+	__b()
+	chue = cmean*mu + mh*nu * gain
+	csat = smean*mu + ms*nu * gain
 	if not lense:
-		cval = rv[min_idx] * mu + mv*nu * gain
+		cval = vmean * mu + mv*nu * gain
 	else: 
 		#cval = np.power(hist.flatten(), 0.2)
 		cval = mu
