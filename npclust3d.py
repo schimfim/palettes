@@ -39,7 +39,7 @@ def plot_cube2d(h,s,v,align=None):
 	plt.clf()
 
 # 
-def calcCube(ary, top_h_perc, nbrs):
+def calcCube(ary, top_h_perc, nbrs, orig=0.0):
 	# get hue and saturation
 	hsv = rgb_to_hsv(ary)
 	hsv = np.reshape(hsv, (-1,3))
@@ -88,9 +88,9 @@ def calcCube(ary, top_h_perc, nbrs):
 	sum_idist = np.sum(idist, 0)
 	mudist = idist / sum_idist
 	__b()
-	chue = np.mean(rh[min_idx], axis=0)
-	csat = np.mean(rs[min_idx], axis=0)
-	cval = np.mean(rv[min_idx], axis=0)
+	chue = np.mean(rh[min_idx], axis=0) * (1-orig) + mh * orig
+	csat = np.mean(rs[min_idx], axis=0) * (1-orig) + ms * orig
+	cval = np.mean(rv[min_idx], axis=0) * (1-orig) + mv * orig
 	cubeh = chue.reshape(N,N,N)
 	cubes = csat.reshape(N,N,N)
 	cubev = cval.reshape(N,N,N)
