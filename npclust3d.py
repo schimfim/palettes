@@ -39,7 +39,7 @@ def plot_cube2d(h,s,v,align=None):
 	plt.clf()
 
 # 
-def calcCube(ary, top_h_perc, nbrs, orig=0.0):
+def calcCube(ary, top_h_perc, nbrs, orig=0.0, contrast=2.0):
 	# get hue and saturation
 	hsv = rgb_to_hsv(ary)
 	hsv = np.reshape(hsv, (-1,3))
@@ -48,13 +48,12 @@ def calcCube(ary, top_h_perc, nbrs, orig=0.0):
 	hist, edges = np.histogramdd(hsv, bins=(N,N,N), normed=False )
 	hist = hist / np.max(hist)
 	if plot:
-		plt.hist(hist.flatten(),log=False, bins=25)
+		plt.hist(hist.flatten(),log=True, bins=25)
 		plt.show(); plt.clf()
 		
 	# reduce histogram
 	hidx = np.argsort(hist, axis=None)
 	hidx=hidx[(N3-N3*top_h_perc):]
-	rhist = hist.flatten()[hidx]
 
 	# full hsv meshes NxNxN
 	ax = np.arange(0.0, 1.0, 1.0/N)
@@ -84,13 +83,14 @@ def calcCube(ary, top_h_perc, nbrs, orig=0.0):
 	min_idx = np.argsort(dist, 0)
 	min_idx = min_idx[0:nbrs]
 	min_dist = np.sort(dist,0)[0:nbrs,:]
-	idist = 1 / (min_dist + 0.00001)
+	idist = np.power(1 / (min_dist + 0.00001), contrast)
 	sum_idist = np.sum(idist, 0)
 	mudist = idist / sum_idist
+	if plot: plt.imshow(mudist[:,1:20], interpolation='none'); plt.show(); plt.clf()
 	__b()
-	chue = np.mean(rh[min_idx], axis=0) * (1-orig) + mh * orig
-	csat = np.mean(rs[min_idx], axis=0) * (1-orig) + ms * orig
-	cval = np.mean(rv[min_idx], axis=0) * (1-orig) + mv * orig
+	chue = np.sum(rh[min_idx] * mudist, axis=0) * (1-orig) + mh * orig
+	csat = np.sum(rs[min_idx] * mudist, axis=0) * (1-orig) + ms * orig
+	cval = np.sum(rv[min_idx] * mudist, axis=0) * (1-orig) + mv * orig
 	cubeh = chue.reshape(N,N,N)
 	cubes = csat.reshape(N,N,N)
 	cubev = cval.reshape(N,N,N)
@@ -124,7 +124,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 	# minh, dmax, dhmin
-	(cube, nc) = calcCube(ary, 0.05, 3)
+	(cube, nc) = calcCube(ary, 0.05, 8)
 	print 'cents=', nc
 
 	#
