@@ -11,7 +11,7 @@ from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 import npclust3d
 import logging as log
 
-npclust3d.plot = True 
+npclust3d.plot = False  
 
 thbsize = (512,512)
 hdsize = (1500,1500)
@@ -62,7 +62,7 @@ def add_filter(sender, img=None ):
 	md.filt_ary = ary
 	uiimg = uiimg_from_array(ary)
 	# calc cube
-	(md.cube, nc) = npclust3d.calcCube(ary, md.h_perc, md.nbrs, md.orig)
+	(md.cube, nc) = npclust3d.calcCube(ary, md.h_perc, md.nbrs, md.orig, md.contr)
 	# update ui
 	img_view = v['theFilter']
 	img_view.image = uiimg
@@ -83,22 +83,25 @@ def apply_filter():
 	img_view.image = uiimg
 	v['activity'].stop()
 
+def apply_filter_hd():
+	pass 
+
 def slider_action(sender):
 	global md
 	md.h_perc = v['histSlider'].value
-	md.nbrs = v['distSlider'].value
+	md.contr = v['distSlider'].value*5.5 + 0.5
 	md.orig = v['dhSlider'].value
-	md.h_perc = 0.05
-	md.nbrs = 3
-	v['minh'].text = 'hperc=%.2f' % md.h_perc
-	v['dmax'].text = 'nbrs=%.2f' % md.nbrs
+	md.h_perc = 0.2
+	md.nbrs = 1
+	v['minh'].text = 'foo=%.2f' % md.h_perc
+	v['dmax'].text = 'contr=%.2f' % md.contr
 	v['dhmin'].text = 'orig=%.2f' % md.orig
 	
 	# update cube
 	if not hasattr(md, 'orig_ary'):
 		print 'no image'
 		return
-	(md.cube, nc) = npclust3d.calcCube(md.filt_ary, md.h_perc, md.nbrs, md.orig)
+	(md.cube, nc) = npclust3d.calcCube(md.filt_ary, md.h_perc, md.nbrs, md.orig, md.contr)
 	v['cents'].text = '%d' % nc
 	
 	apply_filter()
@@ -112,6 +115,16 @@ def switch_action(sender):
 	npclust3d.lense = v['muSwitch'].value
 	slider_action(None )
 
+@ui.in_background
+def save_action(sender):
+	global md
+	if md['hd_img'] is None:
+		return
+	v['activity'].start()
+	img = apply_filter_hd()
+	photos.save_image(img)
+	v['activity'].stop()
+	log.warning('Image saved')
 
 ###
 
