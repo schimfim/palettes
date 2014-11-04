@@ -45,7 +45,7 @@ def calcCube(ary, top_h_perc, nbrs, orig=0.0, contrast=2.0):
 	hsv = np.reshape(hsv, (-1,3))
 
 	# range=((0,1), (0,1), (0,1))
-	hist, edges = np.histogramdd(hsv, bins=(N,N,N), normed=False )
+	hist, edges = np.histogramdd(hsv, bins=(N,N,N), normed=False, range=((0,1), (0,1), (0,1)) )
 	hist = hist / np.max(hist)
 	if plot:
 		plt.hist(hist.flatten(),log=True, bins=25)
@@ -66,6 +66,8 @@ def calcCube(ary, top_h_perc, nbrs, orig=0.0, contrast=2.0):
 	rs = ms[hidx]
 	rv = mv[hidx]
 	l = (rh.shape)[0]
+	# prune centers
+	
 	# full tiled meshes LxN^3
 	fth = np.resize(mh,(l,N**3))
 	fts = np.resize(ms,(l,N**3))
@@ -124,7 +126,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 	# minh, dmax, dhmin
-	(cube, nc) = calcCube(ary, 0.05, 8)
+	(cube, nc) = calcCube(ary, 0.05, 1)
 	print 'cents=', nc
 
 	#
