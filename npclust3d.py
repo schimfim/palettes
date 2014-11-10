@@ -3,9 +3,9 @@ from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 import  matplotlib.pyplot as plt
 from math import ceil, sqrt
 import pdb
-def __b():
-	if debug:
-		pdb.set_trace()
+
+def nthg():
+	pass
 
 # TODO:
 # anzahl center vorgeben (ok)
@@ -14,9 +14,12 @@ def __b():
 
 N = 8
 plot = True 
-debug = False
+debug = True 
 
 N3 = N**3
+
+if debug: __b = pdb.set_trace
+else: __b = nthg
 
 # h,s,v: NxNxN
 # projects to 2d plane
@@ -66,6 +69,7 @@ def calcCube(ary, top_h_perc, nbrs, orig=0.0, contrast=2.0):
 	rs = ms[hidx]
 	rv = mv[hidx]
 	l = (rh.shape)[0]
+	__b()
 	# prune centers
 	
 	# full tiled meshes LxN^3
@@ -126,7 +130,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 	# minh, dmax, dhmin
-	(cube, nc) = calcCube(ary, 0.05, 1)
+	(cube, nc) = calcCube(ary, 0.02, 5)
 	print 'cents=', nc
 
 	#
