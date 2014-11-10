@@ -1,70 +1,55 @@
-# todo:
-# x-werte bei interp_c verwenden
-
 import numpy as np, Image
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 import  matplotlib.pyplot as plt
+from math import ceil, sqrt
+import pdb
 
-# params
-nbins = 64
-size = (512,512)
+def nthg():
+	pass
 
-def open_hsv(fname, size=(256,256)):
-	img = Image.open(fname)
-	img.thumbnail(size)
+plot = True
+debug = False
+
+if debug: __b = pdb.set_trace
+else: __b = nthg
+
+# simple colors
+#cents = np.array([[1.0,0.0,0.0], [0.0,1.0,0.0], [0.0,0.0,1.0]])
+#cents = np.random.rand(5, 3)
+cents = np.array([[1.0,1.0,1.0], [0.0,0.0,0.0]])
+#cents = np.array([[1.0,1.0,1.0], [0.0,0.0,0.0], [1.0,0.0,0.0]])
+NC = len(cents)
+
+def applyCents(ary, cents):
+	__b()
+	sh = ary.shape
+	N = sh[0] * sh[1]
+	print "sh:", sh
+	a = np.reshape(ary, (-1,3))
+	dist = np.zeros((N,NC))
+	for (i,c) in enumerate(cents):
+		dc = np.power(a - c, 2.0)
+		dist[:,i] = np.sqrt(np.sum(dc,1)/NC)
+	sdist = np.sum(1/dist, 1)
+	sdist = np.resize(sdist, (NC,N)).T
+	print "sdist:", sdist.shape
+	mu = (1/dist) / sdist
+	print "mu:", mu.shape
+	out = np.dot(mu, cents)
+	return out.reshape(sh)
+
+if __name__=='__main__':
+	in_img = 'orig/pond.jpg'
+	out_img = 'orig/kueche.jpg'
+
+	#
+	# test image
+	img = Image.open(out_img)
+	img.thumbnail((512,512))
 	ary = np.asarray(img)/255.0
-	# xform to hsv
-	hsv = rgb_to_hsv(ary)
-	#hsv = ary
-	return hsv
 
-def cdf_c(vals, n=nbins):
-	bins = np.zeros(n)
-	s = 0
-	for i in range(len(vals)):
-		idx = int(vals[i] * (n-1))
-		bins[idx] += 1
-		s += 1
-	for i in range(1,n):
-		bins[i] = bins[i-1] + bins[i]
-	for i in range(n):
-		bins[i] = float(bins[i]/s)
-	return bins
+	out = applyCents(ary, cents)
 
-def interp_c(x, xt, yt):
-	left = 0.0
-	ly = 0.0
-	it = 0
-	right = xt[it]
-	ry = yt[it]
-	nx = len(x)
-	ix = 0
-	y = np.zeros(nx)
-	while ix < nx:
-		if x[ix] > right:
-			left = xt[it]
-			ly = yt[it]
-			it += 1
-			right = xt[it]
-			ry = yt[it]
-		y[ix] = (ry+ly)/2
-		ix += 1
-	return y
-
-def gen_map(vals, n=nbins):
-	# process hues
-	yh, xh, patches = plt.hist(vals.flatten(), bins=n, range=(0,1), normed=True, cumulative=True, histtype='step')
-	xhi = np.linspace(0,1,256)
-	yhi = np.interp(xhi, yh, xh[1:])
-	
-	xch = np.linspace(0,1,n)
-	xc = cdf_c(vals.flatten(), n=n)
-	plt.plot(xch, xc)
-	yc = interp_c(xhi, xc, xch)
-	plt.plot(xhi, yhi, xhi, yc)
-	return yhi
-
-hsv = open_hsv('orig/pond.jpg')
-maps = gen_map(hsv[...,0])
-plt.show()
-
+	plt.imshow(out)
+	plt.show()
+	plt.clf()

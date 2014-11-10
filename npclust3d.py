@@ -10,11 +10,11 @@ def nthg():
 # TODO:
 # anzahl center vorgeben (ok)
 # k nearest neighbor (ok)
-# check meshgrid indexing
+# check meshgrid indexing -> siehe docs dazu
 
 N = 8
 plot = True 
-debug = True 
+debug = False
 
 N3 = N**3
 
