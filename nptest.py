@@ -4,20 +4,18 @@ import  matplotlib.pyplot as plt
 from math import ceil, sqrt
 import pdb
 
-def nthg():
-	pass
-
 plot = True
 plot_all = False
-debug = False   
+debug = True 
+debug_all = False 
 
-if debug: __b = pdb.set_trace
-else: __b = nthg
+def __b(set=None):
+	if (debug & (set==1)) | debug_all:
+		pdb.set_trace()
 
 # hist size
 N = 8
 S = 1
-CT = 4.0
 MAXN = 5
 
 # simple colors
@@ -30,8 +28,9 @@ def calcHist(ary, top_h_perc=0.05):
 	a = np.reshape(ary, (-1,3))
 	N3 = N*N*N
 
-	# range=((0,1), (0,1), (0,1))
-	hist, edges = np.histogramdd(a, bins=(N,N,N), normed=False, range=((0,1), (0,1), (0,1)) )
+	range = None 
+	range=((0,1), (0,1), (0,1))
+	hist, edges = np.histogramdd(a, bins=(N,N,N), normed=False, range=range )
 	hist = hist / np.max(hist)
 	if plot_all:
 		plt.hist(hist.flatten(),log=True, bins=25)
@@ -68,7 +67,7 @@ def calcCents(ary, top_h_perc):
 	return (cents, l)
 
 
-def applyCents(ary, cents):
+def applyCents(ary, cents, CT=4.0):
 	__b()
 	nc = len(cents)
 	sh = ary.shape
@@ -88,18 +87,18 @@ def applyCents(ary, cents):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/pond.jpg'
+	in_img = 'orig/sunset.jpg'
 	out_img = 'orig/kueche.jpg'
 	
 	# input image
 	img = Image.open(in_img)
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
-	(cents, nc) = calcCents(ary, 0.05)
+	(cents, nc) = calcCents(ary, 0.1)
 	print 'cents=', nc
 	
 	# calc distribution properties
-	(hidx, hist) = calcHist(ary, 0.05)
+	(hidx, hist) = calcHist(ary, 0.1)
 	# distance matrix
 	cts = cents[..., None]
 	d = np.sqrt(np.power(cts.T - cts, 2.0)/3.0)
@@ -107,9 +106,9 @@ if __name__=='__main__':
 
 	if plot_all:
 		plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
-	spread = np.sum(dist, 0)
-	spread /= np.max(spread)
-	score = (spread > 0.75) | (hist > 0.2)
+	spread = np.mean(dist, 0)
+	#spread /= np.max(spread)
+	score = ((spread >= 0.65) & (hist > 0.0)) | (hist >= 1.0)
 	ncents = cents[score]
 	print 'ncents=', ncents.shape[0]
 
@@ -123,7 +122,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 
-	out = applyCents(ary, cents)
+	out = applyCents(ary, ncents, 4.0)
 
 	plt.imshow(out, interpolation='none')
 	plt.show()
