@@ -8,7 +8,7 @@ def nthg():
 	pass
 
 plot = True
-debug = False 
+debug = False   
 
 if debug: __b = pdb.set_trace
 else: __b = nthg
@@ -25,7 +25,7 @@ MAXN = 5
 #cents = np.array([[1.0,1.0,1.0], [0.0,0.0,0.0]])
 #cents = np.array([[1.0,1.0,1.0], [0.0,0.0,0.0], [1.0,0.0,0.0]])
 
-def calcCents(ary, top_h_perc):
+def calcHist(ary, top_h_perc=0.05):
 	a = np.reshape(ary, (-1,3))
 	N3 = N*N*N
 
@@ -39,6 +39,13 @@ def calcCents(ary, top_h_perc):
 	# reduce histogram
 	hidx = np.argsort(hist, axis=None)
 	hidx=hidx[(N3-N3*top_h_perc):]
+	histi = hist.flatten()[hidx]
+	__b()
+	
+	return (hidx, histi)
+	
+def calcCents(ary, top_h_perc):
+	(hidx, histi) = calcHist(ary, top_h_perc)
 
 	# full hsv meshes NxNxN
 	ax = np.arange(0.0, 1.0, 1.0/N)
@@ -50,21 +57,14 @@ def calcCents(ary, top_h_perc):
 	rh = mh[hidx]
 	rs = ms[hidx]
 	rv = mv[hidx]
-	
-	# prune down to MAXN cents
-	while len(hidx) > MAXN:
-		
-	
 	l = (rh.shape)[0]
-	cents = np.dstack((rh.flatten(), rs.flatten(), rv.flatten())). squeeze()
+	cents = np.dstack((rh,rs,rv)).squeeze()
 	
-	if plot:
-		disp = np.expand_dims(cents,0)
-		__b()
-		plt.imshow(disp, interpolation='none'); plt.show(); plt.clf()
 	__b()
+	if plot:
+		plt.imshow(cents[None, ...], interpolation='none'); plt.show(); plt.clf()
 	
-	return (cents, l)
+	return (cents, l, )
 
 
 def applyCents(ary, cents):
@@ -97,6 +97,19 @@ if __name__=='__main__':
 	(cents, nc) = calcCents(ary, 0.02)
 	print 'cents=', nc
 	
+	# calc distribution properties
+	(hidx, hist) = calcHist(ary, 0.02)
+	# distance matrix
+	cts = cents[..., None]
+	d = np.power(cts.T - cts, 2.0)
+	dist = np.sum(d, 1)
+	
+	plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
+	spread = np.sum(dist, 0)
+	spread /= np.max(spread)
+	__b()
+	
+	'''
 	# test image
 	img = Image.open(out_img)
 	img.thumbnail((256,256))
@@ -104,6 +117,7 @@ if __name__=='__main__':
 
 	out = applyCents(ary, cents)
 
-	plt.imshow(out)
+	plt.imshow(out, interpolation='none')
 	plt.show()
 	plt.clf()
+	'''
