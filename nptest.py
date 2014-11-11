@@ -8,6 +8,7 @@ def nthg():
 	pass
 
 plot = True
+plot_all = False
 debug = False   
 
 if debug: __b = pdb.set_trace
@@ -32,7 +33,7 @@ def calcHist(ary, top_h_perc=0.05):
 	# range=((0,1), (0,1), (0,1))
 	hist, edges = np.histogramdd(a, bins=(N,N,N), normed=False, range=((0,1), (0,1), (0,1)) )
 	hist = hist / np.max(hist)
-	if plot:
+	if plot_all:
 		plt.hist(hist.flatten(),log=True, bins=25)
 		plt.show(); plt.clf()
 		
@@ -64,7 +65,7 @@ def calcCents(ary, top_h_perc):
 	if plot:
 		plt.imshow(cents[None, ...], interpolation='none'); plt.show(); plt.clf()
 	
-	return (cents, l, )
+	return (cents, l)
 
 
 def applyCents(ary, cents):
@@ -88,28 +89,35 @@ def applyCents(ary, cents):
 
 if __name__=='__main__':
 	in_img = 'orig/pond.jpg'
-	out_img = 'orig/dunes.jpg'
+	out_img = 'orig/kueche.jpg'
 	
 	# input image
 	img = Image.open(in_img)
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
-	(cents, nc) = calcCents(ary, 0.02)
+	(cents, nc) = calcCents(ary, 0.05)
 	print 'cents=', nc
 	
 	# calc distribution properties
-	(hidx, hist) = calcHist(ary, 0.02)
+	(hidx, hist) = calcHist(ary, 0.05)
 	# distance matrix
 	cts = cents[..., None]
-	d = np.power(cts.T - cts, 2.0)
+	d = np.sqrt(np.power(cts.T - cts, 2.0)/3.0)
 	dist = np.sum(d, 1)
-	
-	plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
+
+	if plot_all:
+		plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
 	spread = np.sum(dist, 0)
 	spread /= np.max(spread)
+	score = (spread > 0.75) | (hist > 0.2)
+	ncents = cents[score]
+	print 'ncents=', ncents.shape[0]
+
+	if plot:
+		plt.imshow(ncents[None,...], interpolation='none'); plt.show(); plt.clf()
 	__b()
 	
-	'''
+
 	# test image
 	img = Image.open(out_img)
 	img.thumbnail((256,256))
@@ -120,4 +128,4 @@ if __name__=='__main__':
 	plt.imshow(out, interpolation='none')
 	plt.show()
 	plt.clf()
-	'''
+
