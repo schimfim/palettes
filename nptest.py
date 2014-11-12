@@ -16,13 +16,6 @@ def __b(set=None):
 # hist size
 N = 8
 MAXN = 10
-bal = 0.8 # of spread vs. weight
-
-# simple colors
-#cents = np.array([[1.0,0.0,0.0], [0.0,1.0,0.0], [0.0,0.0,1.0]])
-#cents = np.random.rand(5, 3)
-#cents = np.array([[1.0,1.0,1.0], [0.0,0.0,0.0]])
-#cents = np.array([[1.0,1.0,1.0], [0.0,0.0,0.0], [1.0,0.0,0.0]])
 
 def calcHist(ary, top_h_perc=0.05):
 	a = np.reshape(ary, (-1,3))
@@ -87,8 +80,8 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/pond.jpg'
-	out_img = 'orig/kueche.jpg'
+	in_img = 'orig/city.jpg'
+	out_img = 'orig/pond.jpg'
 	
 	# input image
 	img = Image.open(in_img)
@@ -108,20 +101,17 @@ if __name__=='__main__':
 		plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
 	# 
 	# select centers
-	'''
-	spreadi = np.argsort(score)
-	histi = np.argsort(hist)
-	si = spreadi[-8:]
-	histi[si] = []
-	hi = histi[-3:]
-	idx = np.unique(np.concatenate((si,hi)))
-	'''
-	'''
-	score = np.power(np.sum(dist, 0), 2) * hist
-	idx = np.argsort(score)
-	ncents = cents[idx[-20:]]
-	'''
-	idx = np.argmax(hist)
+	# eigentl falsch rum!
+	score = (dist.T * hist).T
+	idx = np.array([np.argmax(hist)])
+	rng = np.arange(hist.shape[0])
+	while idx.size < MAXN:
+		cols = np.setdiff1d(rng, idx)
+		dcent = score[idx][:,cols]
+		dsum = np.sum(dcent, 0)
+		dmax = np.argmax(dsum)
+		idx = np.append(idx, dmax)
+	ncents = cents[idx]
 	
 	print 'ncents=', ncents.shape[0]
 
@@ -135,7 +125,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 
-	out = applyCents(ary, ncents, 4.0)
+	out = applyCents(ary, ncents, 3.0)
 
 	plt.imshow(out, interpolation='none')
 	plt.show()
