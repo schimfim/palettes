@@ -15,7 +15,8 @@ def __b(set=None):
 
 # hist size
 N = 8
-MAXN = 5
+MAXN = 10
+bal = 0.8 # of spread vs. weight
 
 # simple colors
 #cents = np.array([[1.0,0.0,0.0], [0.0,1.0,0.0], [0.0,0.0,1.0]])
@@ -86,7 +87,7 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/pond.jpg'
+	in_img = 'orig/karussel.jpg'
 	out_img = 'orig/kueche.jpg'
 	
 	# input image
@@ -107,13 +108,21 @@ if __name__=='__main__':
 		plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
 	# 
 	# select centers
-	spreadi = np.argsort(np.mean(dist, 0))
+	'''
+	spreadi = np.argsort(score)
 	histi = np.argsort(hist)
 	si = spreadi[-8:]
 	histi[si] = []
 	hi = histi[-3:]
 	idx = np.unique(np.concatenate((si,hi)))
-	ncents = cents[idx]
+	'''
+	'''
+	score = np.power(np.sum(dist, 0), 2) * hist
+	idx = np.argsort(score)
+	ncents = cents[idx[-20:]]
+	'''
+	idx = np.argmax(hist)
+	
 	print 'ncents=', ncents.shape[0]
 
 	if plot:
