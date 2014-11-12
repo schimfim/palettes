@@ -87,7 +87,7 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/karussel.jpg'
+	in_img = 'orig/pond.jpg'
 	out_img = 'orig/kueche.jpg'
 	
 	# input image
@@ -135,7 +135,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 
-	out = applyCents(ary, ncents, 3.0)
+	out = applyCents(ary, ncents, 4.0)
 
 	plt.imshow(out, interpolation='none')
 	plt.show()

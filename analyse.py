@@ -81,6 +81,7 @@ return histogram with extrema set to 1.0.
 If cents=true, also returns centroids as
 arrays of hues and saturations plus array
 of centroid weights.
+NOTE: fuer filter wird nur huec/satc benoetigt
 '''
 def extrema(hist, cents=False):
 	ext = copy.copy(hist)
