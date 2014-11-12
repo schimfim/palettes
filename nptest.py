@@ -15,7 +15,6 @@ def __b(set=None):
 
 # hist size
 N = 8
-S = 1
 MAXN = 5
 
 # simple colors
@@ -87,7 +86,7 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/sunset.jpg'
+	in_img = 'orig/pond.jpg'
 	out_img = 'orig/kueche.jpg'
 	
 	# input image
@@ -106,10 +105,15 @@ if __name__=='__main__':
 
 	if plot_all:
 		plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
-	spread = np.mean(dist, 0)
-	#spread /= np.max(spread)
-	score = ((spread >= 0.65) & (hist > 0.0)) | (hist >= 1.0)
-	ncents = cents[score]
+	# 
+	# select centers
+	spreadi = np.argsort(np.mean(dist, 0))
+	histi = np.argsort(hist)
+	si = spreadi[-8:]
+	histi[si] = []
+	hi = histi[-3:]
+	idx = np.unique(np.concatenate((si,hi)))
+	ncents = cents[idx]
 	print 'ncents=', ncents.shape[0]
 
 	if plot:
@@ -122,7 +126,7 @@ if __name__=='__main__':
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 
-	out = applyCents(ary, ncents, 4.0)
+	out = applyCents(ary, ncents, 3.0)
 
 	plt.imshow(out, interpolation='none')
 	plt.show()
