@@ -30,11 +30,12 @@ def calcHist(ary, nhist=50):
 		plt.show(); plt.clf()
 		
 	# reduce histogram
-	nz = hist.flatten().nonzero()
+	nz = hist.flatten() != 0
 	hidx = np.argsort(hist, axis=None)
 	hidx = hidx[-nhist:]
-	__b(1)
-	hidx = np.setdiff1d(hidx, nz[0])
+	__b()
+	#hidx = np.setdiff1d(hidx, nz)
+	#hidx = hidx[nz[hidx]]
 	histi = hist.flatten()[hidx]
 	__b()
 	
@@ -106,7 +107,7 @@ if __name__=='__main__':
 	# select centers
 	# eigentl falsch rum!
 	#score = (dist.T * hist).T
-	score = dist * hist
+	score = dist #* hist
 	idx = np.array([np.argmax(hist)])
 	rng = np.arange(hist.shape[0])
 	while idx.size < MAXN:
