@@ -17,7 +17,7 @@ def __b(set=None):
 N = 8
 MAXN = 10
 
-def calcHist(ary, top_h_perc=0.05):
+def calcHist(ary, nhist=50):
 	a = np.reshape(ary, (-1,3))
 	N3 = N*N*N
 
@@ -30,15 +30,18 @@ def calcHist(ary, top_h_perc=0.05):
 		plt.show(); plt.clf()
 		
 	# reduce histogram
+	nz = hist.flatten().nonzero()
 	hidx = np.argsort(hist, axis=None)
-	hidx=hidx[(N3-N3*top_h_perc):]
+	hidx = hidx[-nhist:]
+	__b(1)
+	hidx = np.setdiff1d(hidx, nz[0])
 	histi = hist.flatten()[hidx]
 	__b()
 	
 	return (hidx, histi)
 	
-def calcCents(ary, top_h_perc):
-	(hidx, histi) = calcHist(ary, top_h_perc)
+def calcCents(ary, nhist=50):
+	(hidx, histi) = calcHist(ary, nhist)
 
 	# full hsv meshes NxNxN
 	ax = np.arange(0.0, 1.0, 1.0/N)
@@ -80,18 +83,18 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/city.jpg'
-	out_img = 'orig/pond.jpg'
+	in_img = 'orig/pond.jpg'
+	out_img = 'orig/kueche.jpg'
 	
 	# input image
 	img = Image.open(in_img)
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
-	(cents, nc) = calcCents(ary, 0.1)
+	(cents, nc) = calcCents(ary)
 	print 'cents=', nc
 	
 	# calc distribution properties
-	(hidx, hist) = calcHist(ary, 0.1)
+	(hidx, hist) = calcHist(ary)
 	# distance matrix
 	cts = cents[..., None]
 	d = np.sqrt(np.power(cts.T - cts, 2.0)/3.0)
@@ -102,7 +105,8 @@ if __name__=='__main__':
 	# 
 	# select centers
 	# eigentl falsch rum!
-	score = (dist.T * hist).T
+	#score = (dist.T * hist).T
+	score = dist * hist
 	idx = np.array([np.argmax(hist)])
 	rng = np.arange(hist.shape[0])
 	while idx.size < MAXN:
