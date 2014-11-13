@@ -41,6 +41,35 @@ def calcHist(ary, nhist=50):
 	
 	return (hidx, histi)
 	
+def reduc(cents, hist):
+	# distance matrix
+	cts = cents[..., None]
+	d = np.sqrt(np.power(cts.T - cts, 2.0)/3.0)
+	dist = np.sum(d, 1)
+
+	if plot_all:
+		plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
+	# 
+	# select centers
+	# falsch: score = (dist.T * hist).T
+	score = dist #* hist
+	idx = np.array([np.argmax(hist)])
+	rng = np.arange(hist.shape[0])
+	while idx.size < MAXN:
+		cols = np.setdiff1d(rng, idx)
+		dcent = score[idx][:,cols]
+		dsum = np.sum(dcent, 0)
+		dmax = np.argmax(dsum)
+		idx = np.append(idx, dmax)
+	ncents = cents[idx]
+	
+	print 'ncents=', ncents.shape[0]
+
+	if plot:
+		plt.imshow(ncents[None,...], interpolation='none'); plt.show(); plt.clf()
+	__b()
+	return ncents
+	
 def calcCents(ary, nhist=50):
 	(hidx, histi) = calcHist(ary, nhist)
 
@@ -54,8 +83,10 @@ def calcCents(ary, nhist=50):
 	rh = mh[hidx]
 	rs = ms[hidx]
 	rv = mv[hidx]
-	l = (rh.shape)[0]
 	cents = np.dstack((rh,rs,rv)).squeeze()
+	
+	cents = reduc(cents, histi)
+	l = (cents.shape)[0]
 	
 	__b()
 	if plot:
@@ -94,43 +125,12 @@ if __name__=='__main__':
 	(cents, nc) = calcCents(ary)
 	print 'cents=', nc
 	
-	# calc distribution properties
-	(hidx, hist) = calcHist(ary)
-	# distance matrix
-	cts = cents[..., None]
-	d = np.sqrt(np.power(cts.T - cts, 2.0)/3.0)
-	dist = np.sum(d, 1)
-
-	if plot_all:
-		plt.imshow(dist, interpolation='none', cmap='gray'); plt.show(); plt.clf()
-	# 
-	# select centers
-	# eigentl falsch rum!
-	#score = (dist.T * hist).T
-	score = dist #* hist
-	idx = np.array([np.argmax(hist)])
-	rng = np.arange(hist.shape[0])
-	while idx.size < MAXN:
-		cols = np.setdiff1d(rng, idx)
-		dcent = score[idx][:,cols]
-		dsum = np.sum(dcent, 0)
-		dmax = np.argmax(dsum)
-		idx = np.append(idx, dmax)
-	ncents = cents[idx]
-	
-	print 'ncents=', ncents.shape[0]
-
-	if plot:
-		plt.imshow(ncents[None,...], interpolation='none'); plt.show(); plt.clf()
-	__b()
-	
-
 	# test image
 	img = Image.open(out_img)
 	img.thumbnail((256,256))
 	ary = np.asarray(img)/255.0
 
-	out = applyCents(ary, ncents, 3.0)
+	out = applyCents(ary, cents, 3.0)
 
 	plt.imshow(out, interpolation='none')
 	plt.show()
