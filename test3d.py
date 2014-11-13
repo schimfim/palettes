@@ -8,12 +8,13 @@ import Image
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
-import npclust3d
+#import npclust3d
+import nptest
 import logging as log
 
-npclust3d.plot = False  
+nptest.plot = False  
 
-thbsize = (512,512)
+thbsize = (256,256)
 hdsize = (1500,1500)
 
 # model
@@ -62,7 +63,8 @@ def add_filter(sender, img=None ):
 	md.filt_ary = ary
 	uiimg = uiimg_from_array(ary)
 	# calc cube
-	(md.cube, nc) = npclust3d.calcCube(ary, md.h_perc, md.nbrs, md.orig, md.contr)
+	#(md.cube, nc) = npclust3d.calcCube(ary, md.h_perc, md.nbrs, md.orig, md.contr)
+	(md.cube, nc) = nptest.calcCents(ary)
 	# update ui
 	img_view = v['theFilter']
 	img_view.image = uiimg
@@ -77,7 +79,7 @@ def apply_filter():
 		return
 	v['activity'].start()
 	ary = md.orig_ary
-	rgb = npclust3d.applyCube(ary, md.cube)
+	rgb = nptest.applyCents(ary, md.cube, md.contr)
 	uiimg = uiimg_from_array(rgb)
 	img_view = v['theImage']
 	img_view.image = uiimg
@@ -89,7 +91,7 @@ def apply_filter_hd():
 def slider_action(sender):
 	global md
 	md.h_perc = v['histSlider'].value
-	md.contr = v['distSlider'].value*5.5 + 0.5
+	md.contr = v['distSlider'].value * 4.5 + 0.5
 	md.orig = v['dhSlider'].value
 	md.h_perc = 0.2
 	md.nbrs = 1
@@ -101,7 +103,7 @@ def slider_action(sender):
 	if not hasattr(md, 'orig_ary'):
 		print 'no image'
 		return
-	(md.cube, nc) = npclust3d.calcCube(md.filt_ary, md.h_perc, md.nbrs, md.orig, md.contr)
+	(md.cube, nc) = nptest.calcCents(md.filt_ary)
 	v['cents'].text = '%d' % nc
 	
 	apply_filter()
@@ -109,10 +111,10 @@ def slider_action(sender):
 def switch_action(sender):
 	orig = v['origSwitch'].value
 	if orig:
-		npclust3d.gain = 1.0
+		nptest.gain = 1.0
 	else:
-		npclust3d.gain = 0.0
-	npclust3d.lense = v['muSwitch'].value
+		nptest.gain = 0.0
+	nptest.lense = v['muSwitch'].value
 	slider_action(None )
 
 @ui.in_background
