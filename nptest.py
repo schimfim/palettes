@@ -5,7 +5,7 @@ from math import ceil, sqrt
 import pdb
 
 plot = True
-plot_all = False
+plot_all = True 
 debug = True 
 debug_all = False 
 
@@ -17,6 +17,33 @@ def __b(set=None):
 N = 8
 MAXN = 10
 
+# returns index tuples for shifting
+# source and destination matrices
+def shift_indices(dr, dc):
+	row_from = None 
+	row_to = None 
+	if dr==1: row_from = 1
+	if dr==-1: row_to = -1
+	col_from = None 
+	col_to = None 
+	if dc==1: col_from = 1
+	if dc==-1: col_to = -1
+	src_idx = np.s_[row_from:row_to, col_from:col_to]
+	
+	return src_idx
+	
+def min_hist(h):
+	min_hist = np.zeros_like(h)
+	for dr in [-1,0,1]:
+		for dc in [-1,0,1]:
+			if dr==0 & dc == 0: continue 
+			d_hist = h[shift_indices(dr,dc)]
+			min_hist[shift_indices(-dr,-dc)] += d_hist * - 0.25
+
+	hist0 = h + min_hist
+	hist1 = np.maximum(hist0, 0)
+	return hist1
+
 def calcHist(ary, nhist=50):
 	a = np.reshape(ary, (-1,3))
 	N3 = N*N*N
@@ -25,6 +52,7 @@ def calcHist(ary, nhist=50):
 	range=((0,1), (0,1), (0,1))
 	hist, edges = np.histogramdd(a, bins=(N,N,N), normed=False, range=range )
 	hist = hist / np.max(hist)
+	hist = min_hist(hist)
 	if plot_all:
 		plt.hist(hist.flatten(),log=True, bins=25)
 		plt.show(); plt.clf()
@@ -37,7 +65,7 @@ def calcHist(ary, nhist=50):
 	#hidx = np.setdiff1d(hidx, nz)
 	#hidx = hidx[nz[hidx]]
 	histi = hist.flatten()[hidx]
-	__b()
+	__b(1)
 	
 	return (hidx, histi)
 	
@@ -85,7 +113,7 @@ def calcCents(ary, nhist=50):
 	rv = mv[hidx]
 	cents = np.dstack((rh,rs,rv)).squeeze()
 	
-	cents = reduc(cents, histi)
+	#cents = reduc(cents, histi)
 	l = (cents.shape)[0]
 	
 	__b()
