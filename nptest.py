@@ -5,7 +5,7 @@ from math import ceil, sqrt
 import pdb
 
 plot = True
-plot_all = True 
+plot_all = False
 debug = True 
 debug_all = False 
 
@@ -15,11 +15,11 @@ def __b(set=None):
 
 # hist size
 N = 8
-MAXN = 10
+MAXN = 6
 
 # returns index tuples for shifting
 # source and destination matrices
-def shift_indices(dr, dc):
+def shift_indices(ds, dr, dc):
 	row_from = None 
 	row_to = None 
 	if dr==1: row_from = 1
@@ -28,17 +28,35 @@ def shift_indices(dr, dc):
 	col_to = None 
 	if dc==1: col_from = 1
 	if dc==-1: col_to = -1
-	src_idx = np.s_[row_from:row_to, col_from:col_to]
+	slc_from = None
+	slc_to = None
+	if ds==1: slc_from = 1
+	if ds==-1: slc_to = -1
+	src_idx = np.s_[slc_from:slc_to, row_from:row_to, col_from:col_to]
 	
 	return src_idx
 	
-def min_hist(h):
+def min_hist3d(h):
 	min_hist = np.zeros_like(h)
-	for dr in [-1,0,1]:
-		for dc in [-1,0,1]:
-			if dr==0 & dc == 0: continue 
-			d_hist = h[shift_indices(dr,dc)]
-			min_hist[shift_indices(-dr,-dc)] += d_hist * - 0.25
+	for ds in [-1,0,1]:
+		for dr in [-1,0,1]:
+			for dc in [-1,0,1]:
+				if dr==0 & dc == 0 & ds==0: continue
+				d_hist = h[shift_indices(ds,dr,dc)]
+				min_hist[shift_indices(-ds,-dr,-dc)] += d_hist * - 0.2
+
+	hist0 = h + min_hist
+	hist1 = np.maximum(hist0, 0)
+	return hist1
+
+def min_hist3d_2(h):
+	min_hist = np.zeros_like(h)
+	for ds in [-1,0,1]:
+		for dr in [-1,0,1]:
+			for dc in [-1,0,1]:
+				if dr==0 & dc == 0 & ds==0: continue
+				d_hist = h[shift_indices(ds,dr,dc)]
+				min_hist[shift_indices(-ds,-dr,-dc)] += d_hist * - 0.2
 
 	hist0 = h + min_hist
 	hist1 = np.maximum(hist0, 0)
@@ -52,7 +70,7 @@ def calcHist(ary, nhist=50):
 	range=((0,1), (0,1), (0,1))
 	hist, edges = np.histogramdd(a, bins=(N,N,N), normed=False, range=range )
 	hist = hist / np.max(hist)
-	hist = min_hist(hist)
+	hist = min_hist3d(hist)
 	if plot_all:
 		plt.hist(hist.flatten(),log=True, bins=25)
 		plt.show(); plt.clf()
@@ -65,7 +83,7 @@ def calcHist(ary, nhist=50):
 	#hidx = np.setdiff1d(hidx, nz)
 	#hidx = hidx[nz[hidx]]
 	histi = hist.flatten()[hidx]
-	__b(1)
+	__b()
 	
 	return (hidx, histi)
 	
@@ -113,7 +131,7 @@ def calcCents(ary, nhist=50):
 	rv = mv[hidx]
 	cents = np.dstack((rh,rs,rv)).squeeze()
 	
-	#cents = reduc(cents, histi)
+	cents = reduc(cents, histi)
 	l = (cents.shape)[0]
 	
 	__b()
