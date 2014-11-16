@@ -15,7 +15,7 @@ def __b(set=None):
 
 # hist size
 N = 8
-MAXN = 6
+MAXN = 10
 
 # returns index tuples for shifting
 # source and destination matrices
@@ -43,23 +43,22 @@ def min_hist3d(h):
 			for dc in [-1,0,1]:
 				if dr==0 & dc == 0 & ds==0: continue
 				d_hist = h[shift_indices(ds,dr,dc)]
-				min_hist[shift_indices(-ds,-dr,-dc)] += d_hist * - 0.2
+				min_hist[shift_indices(-ds,-dr,-dc)] += d_hist * - 0.25
 
 	hist0 = h + min_hist
 	hist1 = np.maximum(hist0, 0)
 	return hist1
 
 def min_hist3d_2(h):
-	min_hist = np.zeros_like(h)
-	for ds in [-1,0,1]:
-		for dr in [-1,0,1]:
-			for dc in [-1,0,1]:
-				if dr==0 & dc == 0 & ds==0: continue
-				d_hist = h[shift_indices(ds,dr,dc)]
-				min_hist[shift_indices(-ds,-dr,-dc)] += d_hist * - 0.2
+	min_hist = np.empty_like(h)[..., None]
+	for (ds,dr,dc) in zip([-1,1,0,0,0,0], [0,0,-1,1,0,0], [0,0,0,0,-1,1]):
+		d_hist = h[shift_indices(ds,dr,dc)]
+		new_layer = np.zeros_like(h)
+		new_layer[shift_indices(-ds,-dr,-dc)] = d_hist
+		__b(0)
+		min_hist = np.concatenate((min_hist, new_layer[...,None]), axis=3)
 
-	hist0 = h + min_hist
-	hist1 = np.maximum(hist0, 0)
+	hist1 = np.all(h[...,None] > min_hist, axis=-1)
 	return hist1
 
 def calcHist(ary, nhist=50):
@@ -70,7 +69,7 @@ def calcHist(ary, nhist=50):
 	range=((0,1), (0,1), (0,1))
 	hist, edges = np.histogramdd(a, bins=(N,N,N), normed=False, range=range )
 	hist = hist / np.max(hist)
-	hist = min_hist3d(hist)
+	hist = min_hist3d_2(hist)
 	if plot_all:
 		plt.hist(hist.flatten(),log=True, bins=25)
 		plt.show(); plt.clf()
