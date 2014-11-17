@@ -183,7 +183,7 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/pond.jpg'
+	in_img = 'orig/leaves.jpg'
 	out_img = 'orig/kueche.jpg'
 	
 	# input image
