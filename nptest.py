@@ -15,7 +15,24 @@ def __b(set=None):
 
 # hist size
 N = 8
-MAXN = 10
+MAXN = 6
+
+def plot_cube2d(h,s,v,align=None):
+	if not plot:
+		return 
+	l = h. flatten(). size
+	r = sqrt(l)
+	if align is not None:
+		n = ceil(r / align) * align
+	else: 
+		n = ceil(r)
+	m = ceil(l/n)
+	c = np.dstack((h.flatten(), s.flatten(), v.flatten())). squeeze()
+	cube = np.copy(c)
+	cube.resize(m,n,3)
+	plt.imshow(cube, interpolation='none')
+	plt.show()
+	plt.clf()
 
 # returns index tuples for shifting
 # source and destination matrices
@@ -50,16 +67,22 @@ def min_hist3d(h):
 	return hist1
 
 def min_hist3d_2(h):
-	min_hist = np.empty_like(h)[..., None]
+	min_hist = np.empty_like(h[...,None ])
 	for (ds,dr,dc) in zip([-1,1,0,0,0,0], [0,0,-1,1,0,0], [0,0,0,0,-1,1]):
 		d_hist = h[shift_indices(ds,dr,dc)]
 		new_layer = np.zeros_like(h)
 		new_layer[shift_indices(-ds,-dr,-dc)] = d_hist
 		__b(0)
-		min_hist = np.concatenate((min_hist, new_layer[...,None]), axis=3)
+		min_hist = np.concatenate((min_hist, new_layer), axis=3)
+		#min_hist = np.dstack((min_hist, new_layer))
 
-	hist1 = np.all(h[...,None] > min_hist, axis=-1)
-	return hist1
+	print 'min_hist.shape:', min_hist.shape
+	hist1 = np.all(h[...,None] > min_hist, axis=3)
+	print 'Found local peaks:', np.count_nonzero(hist1)
+	__b(0)
+	h[hist1] = 1.0
+	h[hist1 == False] = 0.0
+	return h
 
 def calcHist(ary, nhist=50):
 	a = np.reshape(ary, (-1,3))
@@ -130,7 +153,7 @@ def calcCents(ary, nhist=50):
 	rv = mv[hidx]
 	cents = np.dstack((rh,rs,rv)).squeeze()
 	
-	cents = reduc(cents, histi)
+	#cents = reduc(cents, histi)
 	l = (cents.shape)[0]
 	
 	__b()
