@@ -48,9 +48,18 @@ for dr in [-1,0,1]:
 		d_hist = hist[shift_indices(dr,dc)]
 		min_hist[shift_indices(-dr,-dc)] += d_hist * - 0.125
 
-show_hist(min_hist)
-
 hist0 = hist + min_hist
 hist1 = np.maximum(hist0, 0)
 show_hist(hist1)
 
+loc_mins = np.empty_like(hist)
+for dr in [-1,0,1]:
+	for dc in [-1,0,1]:
+		if dr==0 and dc == 0: continue
+		d_hist = hist[shift_indices(dr,dc)]
+		new_layer = np.zeros_like(hist)
+		new_layer[shift_indices(-dr,-dc)] = d_hist
+		loc_mins = np.dstack((loc_mins, new_layer))
+
+loc_hmin = np.all(hist[...,None] > loc_mins, axis=-1)
+show_hist(loc_hmin)
