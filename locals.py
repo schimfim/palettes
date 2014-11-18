@@ -2,8 +2,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-range = [[-0.5,1.5],[-0.5,1.5]]
-range2 = [-0.5,1.5,-0.5,1.5]
+range = [[-0.0,1.0],[-0.5,1.5]]
+range2 = [-0.0,1.0,-0.5,1.5]
 
 def show_hist(h,xi,yi):
 	plt.imshow(h, interpolation='none', cmap='hot', origin='lower', extent=range2)
@@ -15,9 +15,9 @@ def gen_data(means, Nrows=500):
 	for m in means:
 		xn = np.random.normal(0.0, 0.1, (Nrows, len(means[0]))) + m
 		x = np.concatenate((x,xn))
-	return x
+	return x[1:,...]
 
-data = gen_data([(0.1,0.1), (0.3,0.8)])
+data = gen_data([(0.2,0.8), (0.6,0.5)])
 x = data[:,0]
 y = data[:,1]
 
@@ -69,9 +69,14 @@ for dr in [-1,0,1]:
 		new_layer = np.zeros_like(hist)
 		new_layer[shift_indices(-dr,-dc)] = d_hist
 		loc_mins = np.dstack((loc_mins, new_layer))
+loc_mins = loc_mins[:,:,1:]
 
 loc_hmin = np.all(hist[...,None] > loc_mins, axis=-1)
 show_hist(loc_hmin, xi, yi)
+idx = np.argwhere(loc_hmin)
+print "idx:", idx
+print xi[idx[:,0]], yi[idx[:,1]]
+
 '''
 min_hist = np.empty_like(h[...,None ])
 for (ds,dr,dc) in zip([-1,1,0,0,0,0], [0,0,-1,1,0,0], [0,0,0,0,-1,1]):
