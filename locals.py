@@ -22,11 +22,14 @@ x = data[:,0]
 y = data[:,1]
 
 plt.scatter(x,y)
+plt.axis(range2)
+plt.gca().set_aspect('equal')
 plt.show(); plt.clf()
 
 # calc distribution
-(hist,xi,yi) = np.histogram2d(x,y, bins=15, range=range)
+(hist,yi,xi) = np.histogram2d(x,y, bins=15, range=range)
 hist /= np.max(hist)
+hist = hist.T
 show_hist(hist,xi,yi)
 
 #
