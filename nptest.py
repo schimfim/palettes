@@ -15,7 +15,7 @@ def __b(set=None):
 
 # hist size
 N = 8
-MAXN = 6
+MAXN = 4
 
 def plot_cube2d(h,s,v,align=None):
 	if not plot:
@@ -67,20 +67,20 @@ def min_hist3d(h):
 	return hist1
 
 def min_hist3d_2(h):
-	min_hist = np.empty_like(h[...,None ])
+	min_hist = np.zeros_like(h[...,None ])
 	for (ds,dr,dc) in zip([-1,1,0,0,0,0], [0,0,-1,1,0,0], [0,0,0,0,-1,1]):
 		d_hist = h[shift_indices(ds,dr,dc)]
 		new_layer = np.zeros_like(h)
 		new_layer[shift_indices(-ds,-dr,-dc)] = d_hist
 		__b(0)
-		min_hist = np.concatenate((min_hist, new_layer), axis=3)
+		min_hist = np.concatenate((min_hist, new_layer[...,None]), axis=3)
 		#min_hist = np.dstack((min_hist, new_layer))
 
 	print 'min_hist.shape:', min_hist.shape
 	hist1 = np.all(h[...,None] > min_hist, axis=3)
 	print 'Found local peaks:', np.count_nonzero(hist1)
 	__b(0)
-	h[hist1] = 1.0
+	#h[hist1] = 1.0
 	h[hist1 == False] = 0.0
 	return h
 
@@ -102,8 +102,8 @@ def calcHist(ary, nhist=50):
 	hidx = np.argsort(hist, axis=None)
 	hidx = hidx[-nhist:]
 	__b()
-	#hidx = np.setdiff1d(hidx, nz)
-	#hidx = hidx[nz[hidx]]
+	hidx = np.setdiff1d(hidx, nz)
+	hidx = hidx[nz[hidx]]
 	histi = hist.flatten()[hidx]
 	__b()
 	
@@ -183,8 +183,8 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/leaves.jpg'
-	out_img = 'orig/kueche.jpg'
+	in_img = 'orig/sylt.jpg'
+	out_img = 'orig/sylt.jpg'
 	
 	# input image
 	img = Image.open(in_img)
