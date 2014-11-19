@@ -9,15 +9,19 @@ def show_hist(h,xi,yi):
 	plt.imshow(h, interpolation='none', cmap='hot', origin='lower', extent=range2)
 	plt.show(); plt.clf()
 
-# generate some data
+
+# generate some samples
 def gen_data(means, Nrows=500):
-	x = np.zeros( (1, len(means[1])) )
+	Ndim = len(means[1])
+	Np = len(means[0])
+	print 'Gen %d points of dim %d' % (Np, Ndim)
+	x = np.zeros((1, Ndim))
 	for m in means:
-		xn = np.random.normal(0.0, 0.1, (Nrows, len(means[0]))) + m
+		xn = np.random.normal(0.0, 0.1, (Nrows, Ndim)) + m
 		x = np.concatenate((x,xn))
 	return x[1:,...]
 
-data = gen_data([(0.2,0.8), (0.6,0.5)])
+data = gen_data([[0.2,0.8], [0.6,0.5], [0.9,0.5]])
 x = data[:,0]
 y = data[:,1]
 
@@ -27,7 +31,7 @@ plt.gca().set_aspect('equal')
 plt.show(); plt.clf()
 
 # calc distribution
-(hist,yi,xi) = np.histogram2d(x,y, bins=15, range=range)
+(hist,xi,yi) = np.histogram2d(x,y, bins=15, range=range)
 hist /= np.max(hist)
 hist = hist.T
 show_hist(hist,xi,yi)
@@ -75,7 +79,15 @@ loc_hmin = np.all(hist[...,None] > loc_mins, axis=-1)
 show_hist(loc_hmin, xi, yi)
 idx = np.argwhere(loc_hmin)
 print "idx:", idx
-print xi[idx[:,0]], yi[idx[:,1]]
+print xi[idx[:,1]], yi[idx[:,0]]
+
+print '3D DATA'
+data3 = gen_data([(0.2,0.8,0.3),
+                  (0.6,0.5,0.9),
+                  (0.1,0.1,0.2)])
+x = data[:,0]
+y = data[:,1]
+z = data[:,2]
 
 '''
 min_hist = np.empty_like(h[...,None ])
