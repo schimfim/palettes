@@ -31,10 +31,10 @@ plt.gca().set_aspect('equal')
 plt.show(); plt.clf()
 
 # calc distribution
-(hist,xi,yi) = np.histogram2d(x,y, bins=15, range=range)
-hist /= np.max(hist)
-hist = hist.T
-show_hist(hist,xi,yi)
+(hh,xi,yi) = np.histogram2d(x,y, bins=15, range=range)
+hh /= np.max(hh)
+hh = hh.T
+show_hist(hh,xi,yi)
 
 #
 # find local maximae
@@ -54,28 +54,28 @@ def shift_indices(dr, dc):
 	
 	return src_idx
 
-min_hist = np.zeros_like(hist)
+min_hist = np.zeros_like(hh)
 for dr in [-1,0,1]:
 	for dc in [-1,0,1]:
 		if dr==0 & dc == 0: continue 
-		d_hist = hist[shift_indices(dr,dc)]
+		d_hist = hh[shift_indices(dr,dc)]
 		min_hist[shift_indices(-dr,-dc)] += d_hist * - 0.125
 
-hist0 = hist + min_hist
+hist0 = hh + min_hist
 hist1 = np.maximum(hist0, 0)
 show_hist(hist1, xi, yi)
 
-loc_mins = np.zeros_like(hist)
+loc_mins = np.zeros_like(hh)
 for dr in [-1,0,1]:
 	for dc in [-1,0,1]:
 		if dr==0 and dc == 0: continue
-		d_hist = hist[shift_indices(dr,dc)]
-		new_layer = np.zeros_like(hist)
+		d_hist = hh[shift_indices(dr,dc)]
+		new_layer = np.zeros_like(hh)
 		new_layer[shift_indices(-dr,-dc)] = d_hist
 		loc_mins = np.dstack((loc_mins, new_layer))
 loc_mins = loc_mins[:,:,1:]
 
-loc_hmin = np.all(hist[...,None] > loc_mins, axis=-1)
+loc_hmin = np.all(hh[...,None] > loc_mins, axis=-1)
 show_hist(loc_hmin, xi, yi)
 idx = np.argwhere(loc_hmin)
 print "idx:", idx
