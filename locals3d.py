@@ -1,0 +1,90 @@
+# finding local maxima
+import numpy as np
+import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d as mtd
+
+NBINS = 20
+NSAMPLES = 500 # smpls per cluster
+	
+def gen_data(means, Nrows=500):
+	Ndim = len(means[0])
+	Np = len(means)
+	print 'Gen %d points of dim %d' % (Np, Ndim)
+	x = np.zeros((1, Ndim))
+	for m in means:
+		xn = np.random.normal(0.0, 0.1, (Nrows, Ndim)) + m
+		x = np.concatenate((x,xn))
+	return x[1:,...]
+
+def shift_indices3d(ds, dr, dc):
+	row_from = None 
+	row_to = None 
+	if dr==1: row_from = 1
+	if dr==-1: row_to = -1
+	col_from = None 
+	col_to = None 
+	if dc==1: col_from = 1
+	if dc==-1: col_to = -1
+	slc_from = None
+	slc_to = None
+	if ds==1: slc_from = 1
+	if ds==-1: slc_to = -1
+	src_idx = np.s_[slc_from:slc_to, row_from:row_to, col_from:col_to]
+	
+	return src_idx
+
+print '3D DATA'
+means = [(0.2,0.8,0.3),
+         (0.6,0.5,0.9),
+         (0.1,0.1,0.2)]
+data3 = gen_data(means, Nrows=NSAMPLES)
+x = data3[:,0]
+y = data3[:,1]
+z = data3[:,2]
+
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')
+ax.scatter(x,y,z, s=1, alpha=0.3)
+ax.set_xlabel('X')
+ax.set_ylabel('Y')
+ax.set_zlabel('Z')
+pmeans = np.array(means)
+ax.scatter(pmeans[:,0],pmeans[:,1], pmeans[:,2], c='g',s=800, marker='v')
+
+(h3, edges) = np.histogramdd(data3, bins=NBINS)
+h3 /= np.max(h3)
+
+min_hist = np.zeros_like(h3)[None,...]
+#for (ds,dr,dc) in zip([-1,1,0,0,0,0], [0,0,-1,1,0,0], [0,0,0,0,-1,1]):
+for dr in [-1,0,1]:
+	for dc in [-1,0,1]:
+		for ds in [-1,0,1]:
+			if dr==0 and dc == 0 and ds==0: continue 
+			d_hist = h3[shift_indices3d(ds,dr,dc)]
+			new_layer = np.zeros_like(h3)
+			new_layer[shift_indices3d(-ds,-dr,-dc)] = d_hist
+			#__b(0)
+			min_hist = np.concatenate((min_hist, new_layer[None,...]))
+			#min_hist = np.dstack((min_hist, new_layer))
+
+print 'min_hist.shape:', min_hist.shape
+hist1 = np.all(h3[None,...] > min_hist, axis=0)
+print 'Found local peaks:', np.count_nonzero(hist1)
+
+h3[hist1 == False] = 0.0
+xx = edges[0][hist1.nonzero()[0]].T
+yy = edges[1][hist1.nonzero()[1]].T
+zz = edges[2][hist1.nonzero()[2]].T
+
+ax.scatter(xx,yy,zz,c='r',s=200)
+plt.show(); plt.clf()
+
+print 'centers:'
+cents = np.vstack((xx,yy,zz)).T
+sizes = h3[hist1.nonzero()].T
+print [cents, sizes]
+
+# todo: remove small clusters
+# todo: use average of peak histogram cell as center
+# todo: join large clusters using weighted means as center (to clear border cases)
+
