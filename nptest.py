@@ -15,7 +15,7 @@ def __b(set=None):
 
 # hist size
 N = 8
-MAXN = 4
+MAXN = 5
 
 def plot_cube2d(h,s,v,align=None):
 	if not plot:
@@ -153,7 +153,7 @@ def calcCents(ary, nhist=50):
 	rv = mv[hidx]
 	cents = np.dstack((rh,rs,rv)).squeeze()
 	
-	#cents = reduc(cents, histi)
+	cents = reduc(cents, histi)
 	l = (cents.shape)[0]
 	
 	__b()
@@ -183,7 +183,7 @@ def applyCents(ary, cents, CT=4.0):
 	return out.reshape(sh)
 
 if __name__=='__main__':
-	in_img = 'orig/daisies.jpg'
+	in_img = 'orig/rgb.jpg'
 	out_img = 'orig/sylt.jpg'
 	
 	# input image
