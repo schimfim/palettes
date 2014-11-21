@@ -1,19 +1,19 @@
 # finding local maxima
 import numpy as np
 import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d as mtd
 
-range = [[-0.0,1.0],[-0.5,1.5]]
+range1 = [[-0.0,1.0],[-0.5,1.5]]
 range2 = [-0.0,1.0,-0.5,1.5]
 
-def show_hist(h,xi,yi):
+def show_hist(h,xi,yi, hold=False):
 	plt.imshow(h, interpolation='none', cmap='hot', origin='lower', extent=range2)
-	plt.show(); plt.clf()
-
-
-# generate some samples
+	if not hold:
+		plt.show(); plt.clf()
+	
 def gen_data(means, Nrows=500):
-	Ndim = len(means[1])
-	Np = len(means[0])
+	Ndim = len(means[0])
+	Np = len(means)
 	print 'Gen %d points of dim %d' % (Np, Ndim)
 	x = np.zeros((1, Ndim))
 	for m in means:
@@ -21,20 +21,25 @@ def gen_data(means, Nrows=500):
 		x = np.concatenate((x,xn))
 	return x[1:,...]
 
-data = gen_data([[0.2,0.8], [0.6,0.5], [0.9,0.5]])
+means = [[0.2,0.8], [0.6,0.5], [0.9,0.5]]
+data = gen_data(means)
 x = data[:,0]
 y = data[:,1]
 
-plt.scatter(x,y)
+plt.scatter(x,y,s=1)
 plt.axis(range2)
-plt.gca().set_aspect('equal')
-plt.show(); plt.clf()
+#plt.gca().set_aspect('equal')
+#plt.show(); plt.clf()
+# plot means
+pmeans = np.array(means)
+plt.scatter(pmeans[:,0],pmeans[:,1],c='g',s=200, marker='v')
 
 # calc distribution
-(hh,xi,yi) = np.histogram2d(x,y, bins=15, range=range)
+(hh,xi,yi) = np.histogram2d(x,y, bins=15, range=range1)
 hh /= np.max(hh)
-hh = hh.T
-show_hist(hh,xi,yi)
+#hh = hh.T
+# hh has x in rows!
+#show_hist(hh.T,xi,yi,hold=True)
 
 #
 # find local maximae
@@ -63,7 +68,7 @@ for dr in [-1,0,1]:
 
 hist0 = hh + min_hist
 hist1 = np.maximum(hist0, 0)
-show_hist(hist1, xi, yi)
+#show_hist(hist1.T, xi, yi)
 
 loc_mins = np.zeros_like(hh)
 for dr in [-1,0,1]:
@@ -76,33 +81,12 @@ for dr in [-1,0,1]:
 loc_mins = loc_mins[:,:,1:]
 
 loc_hmin = np.all(hh[...,None] > loc_mins, axis=-1)
-show_hist(loc_hmin, xi, yi)
+#show_hist(loc_hmin.T, xi, yi)
 idx = np.argwhere(loc_hmin)
 print "idx:", idx
-print xi[idx[:,1]], yi[idx[:,0]]
-
-print '3D DATA'
-data3 = gen_data([(0.2,0.8,0.3),
-                  (0.6,0.5,0.9),
-                  (0.1,0.1,0.2)])
-x = data[:,0]
-y = data[:,1]
-z = data[:,2]
-
-'''
-min_hist = np.empty_like(h[...,None ])
-for (ds,dr,dc) in zip([-1,1,0,0,0,0], [0,0,-1,1,0,0], [0,0,0,0,-1,1]):
-	d_hist = h[shift_indices(ds,dr,dc)]
-	new_layer = np.zeros_like(h)
-	new_layer[shift_indices(-ds,-dr,-dc)] = d_hist
-	__b(0)
-	min_hist = np.concatenate((min_hist, new_layer), axis=3)
-	#min_hist = np.dstack((min_hist, new_layer))
-
-print 'min_hist.shape:', min_hist.shape
-hist1 = np.all(h[...,None] > min_hist, axis=3)
-print 'Found local peaks:', np.count_nonzero(hist1)
-__b(0)
-h[hist1] = 1.0
-h[hist1 == False] = 0.0
-'''
+xn = (xi[idx[:,0]] + xi[idx[:,0]+1])/2
+yn =  (yi[idx[:,1]] + yi[idx[:,1]+1])/2
+xy = np.vstack((xn,yn)).T
+plt.scatter(xn,yn,c='r',s=hh[idx[:,0],idx[:,1]]*1000, marker='o', alpha=0.5)
+plt.show()
+plt.clf()
