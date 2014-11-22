@@ -1,7 +1,6 @@
 # finding local maxima
 import numpy as np
 import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d as mtd
 
 range1 = [[-0.0,1.0],[-0.5,1.5]]
 range2 = [-0.0,1.0,-0.5,1.5]

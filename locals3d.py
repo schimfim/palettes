@@ -1,7 +1,7 @@
 # finding local maxima
 import numpy as np
 import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d as mtd
+import mpl_toolkits.mplot3d
 
 NBINS = 20
 NSAMPLES = 500 # smpls per cluster
@@ -71,17 +71,19 @@ print 'min_hist.shape:', min_hist.shape
 hist1 = np.all(h3[None,...] > min_hist, axis=0)
 print 'Found local peaks:', np.count_nonzero(hist1)
 
+# calc centers
 h3[hist1 == False] = 0.0
-xx = edges[0][hist1.nonzero()[0]].T
-yy = edges[1][hist1.nonzero()[1]].T
-zz = edges[2][hist1.nonzero()[2]].T
+idx_full = np.vstack(hist1.nonzero()).T
+xx = edges[0][idx_full[:,0]]
+yy = edges[1][idx_full[:,1]]
+zz = edges[2][idx_full[:,2]]
 
 ax.scatter(xx,yy,zz,c='b',s=100,alpha=0.8)
 
 np.set_printoptions(precision=3, suppress=True)
 print 'centers:'
 cents = np.vstack((xx,yy,zz)).T
-sizes = h3[hist1.nonzero()].T
+sizes = h3[hist1.nonzero()]
 print np.vstack((cents.T ,sizes.T)).T
 
 # remove small clusters
@@ -89,10 +91,14 @@ print 'centers > 0.5:'
 ridx = sizes >= 0.5
 rcents = cents[ridx,:]
 rsizes = sizes[ridx]
+ridx_full = idx_full[ridx,:]
 print np.vstack((rcents.T ,rsizes.T)).T
 ax.scatter(rcents[:,0], rcents[:,1], rcents[:,2], c='r',s=400)
 
 # todo: use average of peak histogram cell as center
+for i in ridx_full:
+    data3[:,0] > edges[0][i[0]] and data3[:,0] <= edges[0][i[0]+1]
+
 # todo: join large clusters using weighted means as center (to clear border cases)
 
 #
