@@ -76,15 +76,24 @@ xx = edges[0][hist1.nonzero()[0]].T
 yy = edges[1][hist1.nonzero()[1]].T
 zz = edges[2][hist1.nonzero()[2]].T
 
-ax.scatter(xx,yy,zz,c='r',s=200)
-plt.show(); plt.clf()
+ax.scatter(xx,yy,zz,c='b',s=100,alpha=0.8)
 
+np.set_printoptions(precision=3, suppress=True)
 print 'centers:'
 cents = np.vstack((xx,yy,zz)).T
 sizes = h3[hist1.nonzero()].T
-print [cents, sizes]
+print np.vstack((cents.T ,sizes.T)).T
 
-# todo: remove small clusters
+# remove small clusters
+print 'centers > 0.5:'
+ridx = sizes >= 0.5
+rcents = cents[ridx,:]
+rsizes = sizes[ridx]
+print np.vstack((rcents.T ,rsizes.T)).T
+ax.scatter(rcents[:,0], rcents[:,1], rcents[:,2], c='r',s=400)
+
 # todo: use average of peak histogram cell as center
 # todo: join large clusters using weighted means as center (to clear border cases)
 
+#
+plt.show(); plt.clf()
