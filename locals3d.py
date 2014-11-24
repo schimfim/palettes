@@ -5,7 +5,9 @@ import mpl_toolkits.mplot3d
 
 NBINS = 15
 NSAMPLES = 500 # smpls per cluster
-    
+
+np.set_printoptions(precision=3, suppress=True)
+
 def gen_data(means, Nrows=500):
     Ndim = len(means[0])
     Np = len(means)
@@ -33,6 +35,55 @@ def shift_indices3d(ds, dr, dc):
     
     return src_idx
 
+def find_peaks(data, bins=NBINS):
+	(h3, edges) = np.histogramdd(data3, bins=bins)
+	h3 /= np.max(h3)
+	edg = np.vstack(edges).T
+	
+	min_hist = np.zeros_like(h3)[None,...]
+	for dr in [-1,0,1]:
+		for dc in [-1,0,1]:
+			for ds in [-1,0,1]:
+				if dr==0 and dc == 0 and ds==0: continue 
+				d_hist = h3[shift_indices3d(ds,dr,dc)]
+				new_layer = np.zeros_like(h3)
+				new_layer[shift_indices3d(-ds,-dr,-dc)] = d_hist
+				min_hist = np.concatenate((min_hist, new_layer[None,...]))
+	
+	print 'min_hist.shape:', min_hist.shape
+	hist1 = np.all(h3[None,...] > min_hist, axis=0)
+	print 'Found local peaks:', np.count_nonzero(hist1)
+
+	# calc centers
+	h3[hist1 == False] = 0.0
+	idx_full = np.vstack(hist1.nonzero()).T
+	cents = edg[idx_full, [0,1,2]]
+
+	# use average of peak histogram cell as center
+	mcents = np.zeros_like(cents)
+	for (row,i) in enumerate(idx_full):
+		e0 = edg[i, [0,1,2]]
+		e1 = edg[i+1, [0,1,2]]
+		m = np.logical_and(data3 > e0, data3 < e1)
+		ma = np.all(m, axis=1)
+		mcents[row,:] = np.mean(data3[ma,:],axis=0)
+		
+	sizes = h3[hist1.nonzero()]
+	return mcents, edg, sizes
+
+def cutoff_cents(mcents, sizes):
+	print np.vstack((mcents.T ,sizes.T)).T
+
+	# remove small clusters
+	print 'centers > 0.5:'
+	ridx = sizes >= 0.5
+	rcents = mcents[ridx,:]
+	rsizes = sizes[ridx]
+	#ridx_full = idx_full[ridx,:]
+
+	return rcents, rsizes
+
+###
 print '3D DATA'
 means = [(0.2,0.8,0.3),
          (0.6,0.5,0.9),
@@ -51,62 +102,13 @@ ax.set_zlabel('Z')
 pmeans = np.array(means)
 ax.scatter(pmeans[:,0],pmeans[:,1], pmeans[:,2], c='g',s=800, marker='v')
 
-(h3, edges) = np.histogramdd(data3, bins=NBINS)
-h3 /= np.max(h3)
-edg = np.vstack(edges).T
+mcents, edg, sizes = find_peaks(data3)
+ax.scatter(mcents[:,0], mcents[:,1], mcents[:,2], c='b',s=100,alpha=0.8)
 
-### def find_peaks
-min_hist = np.zeros_like(h3)[None,...]
-for dr in [-1,0,1]:
-    for dc in [-1,0,1]:
-        for ds in [-1,0,1]:
-            if dr==0 and dc == 0 and ds==0: continue 
-            d_hist = h3[shift_indices3d(ds,dr,dc)]
-            new_layer = np.zeros_like(h3)
-            new_layer[shift_indices3d(-ds,-dr,-dc)] = d_hist
-            #__b(0)
-            min_hist = np.concatenate((min_hist, new_layer[None,...]))
-
-print 'min_hist.shape:', min_hist.shape
-hist1 = np.all(h3[None,...] > min_hist, axis=0)
-print 'Found local peaks:', np.count_nonzero(hist1)
-
-# calc centers
-# todo: hier schon mittelwerte verwenden
-h3[hist1 == False] = 0.0
-idx_full = np.vstack(hist1.nonzero()).T
-cents = edg[idx_full, [0,1,2]]
-###
-
-ax.scatter(cents[:,0],cents[:,1],cents[:,2],c='b',s=100,alpha=0.8)
-
-np.set_printoptions(precision=3, suppress=True)
-
-### def cutoff_cents
-sizes = h3[hist1.nonzero()]
-print np.vstack((cents.T ,sizes.T)).T
-
-# remove small clusters
-print 'centers > 0.5:'
-ridx = sizes >= 0.5
-rcents = cents[ridx,:]
-rsizes = sizes[ridx]
-ridx_full = idx_full[ridx,:]
-###
-
+rcents, rsizes = cutoff_cents(mcents, sizes)
 print np.vstack((rcents.T ,rsizes.T)).T
 ax.scatter(rcents[:,0], rcents[:,1], rcents[:,2], c='r',s=400)
 
-### nach oben!
-# use average of peak histogram cell as center
-mcents = np.zeros_like(rcents)
-for (row,i) in enumerate(ridx_full):
-    e0 = edg[i, [0,1,2]]
-    e1 = edg[i+1, [0,1,2]]
-    m = np.logical_and(data3 > e0, data3 < e1)
-    ma = np.all(m, axis=1)
-    mcents[row,:] = np.mean(data3[ma,:],axis=0)
-###
 
 # todo: join large clusters using weighted means as center (to clear border cases)
 
