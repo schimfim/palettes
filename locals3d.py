@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d
 
-NBINS = 20
+NBINS = 15
 NSAMPLES = 500 # smpls per cluster
 	
 def gen_data(means, Nrows=500):
@@ -53,9 +53,9 @@ ax.scatter(pmeans[:,0],pmeans[:,1], pmeans[:,2], c='g',s=800, marker='v')
 
 (h3, edges) = np.histogramdd(data3, bins=NBINS)
 h3 /= np.max(h3)
+edg = np.vstack(edges).T
 
 min_hist = np.zeros_like(h3)[None,...]
-#for (ds,dr,dc) in zip([-1,1,0,0,0,0], [0,0,-1,1,0,0], [0,0,0,0,-1,1]):
 for dr in [-1,0,1]:
 	for dc in [-1,0,1]:
 		for ds in [-1,0,1]:
@@ -65,13 +65,13 @@ for dr in [-1,0,1]:
 			new_layer[shift_indices3d(-ds,-dr,-dc)] = d_hist
 			#__b(0)
 			min_hist = np.concatenate((min_hist, new_layer[None,...]))
-			#min_hist = np.dstack((min_hist, new_layer))
 
 print 'min_hist.shape:', min_hist.shape
 hist1 = np.all(h3[None,...] > min_hist, axis=0)
 print 'Found local peaks:', np.count_nonzero(hist1)
 
 # calc centers
+# todo: hier schon mittelwerte verwenden
 h3[hist1 == False] = 0.0
 idx_full = np.vstack(hist1.nonzero()).T
 xx = edges[0][idx_full[:,0]]
@@ -83,6 +83,10 @@ ax.scatter(xx,yy,zz,c='b',s=100,alpha=0.8)
 np.set_printoptions(precision=3, suppress=True)
 print 'centers:'
 cents = np.vstack((xx,yy,zz)).T
+
+cents = edg[idx_full, [0,1,2]]
+# this works: edg[np.array([[0,2],[1,1],[0,2]]).T,np.array([0,1,2])]
+
 sizes = h3[hist1.nonzero()]
 print np.vstack((cents.T ,sizes.T)).T
 
@@ -95,9 +99,14 @@ ridx_full = idx_full[ridx,:]
 print np.vstack((rcents.T ,rsizes.T)).T
 ax.scatter(rcents[:,0], rcents[:,1], rcents[:,2], c='r',s=400)
 
-# todo: use average of peak histogram cell as center
-for i in ridx_full:
-    data3[:,0] > edges[0][i[0]] and data3[:,0] <= edges[0][i[0]+1]
+# use average of peak histogram cell as center
+mcents = np.zeros_like(rcents)
+for (row,i) in enumerate(ridx_full):
+	e0 = [edges[0][i[0]], edges[1][i[1]], edges[2][i[2]]]
+	e1 = [edges[0][i[0]+1], edges[1][i[1]+1], edges[2][i[2]+1]]
+	m = np.logical_and(data3 > e0, data3 < e1)
+	ma = np.all(m, axis=1)
+	mcents[row,:] = np.mean(data3[ma,:],axis=0)
 
 # todo: join large clusters using weighted means as center (to clear border cases)
 
