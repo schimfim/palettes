@@ -2,6 +2,15 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d
+import Image
+
+import pdb
+debug = True
+debug_all = False
+def __b(set=None):
+	if (debug & (set==1)) | debug_all:
+		pdb.set_trace()
+
 
 NBINS = 15
 NSAMPLES = 500 # smpls per cluster
@@ -35,11 +44,26 @@ def shift_indices3d(ds, dr, dc):
     
     return src_idx
 
-def find_peaks(data, bins=NBINS):
-	(h3, edges) = np.histogramdd(data3, bins=bins)
+def cutoff_cents(mcents, sizes, cutoff=0.5):
+	print np.vstack((mcents.T ,sizes.T)).T
+
+	# remove small clusters
+	print 'centers >', cutoff
+	ridx = sizes >= cutoff
+	rcents = mcents[ridx,:]
+	rsizes = sizes[ridx]
+	#ridx_full = idx_full[ridx,:]
+
+	return rcents, rsizes
+
+def find_peaks(data, bins=NBINS, cutoff=0.5):
+	(h3, edges) = np.histogramdd(np.reshape(data, (-1,3)), bins=bins, range=((0,1),(0,1),(0,1)))
 	h3 /= np.max(h3)
 	edg = np.vstack(edges).T
 	
+	# todo: remove low freq cells
+	
+	# find local peaks
 	min_hist = np.zeros_like(h3)[None,...]
 	for dr in [-1,0,1]:
 		for dc in [-1,0,1]:
@@ -67,50 +91,53 @@ def find_peaks(data, bins=NBINS):
 		m = np.logical_and(data3 > e0, data3 < e1)
 		ma = np.all(m, axis=1)
 		mcents[row,:] = np.mean(data3[ma,:],axis=0)
-		
+	__b()
+	
 	sizes = h3[hist1.nonzero()]
-	return mcents, edg, sizes
-
-def cutoff_cents(mcents, sizes):
-	print np.vstack((mcents.T ,sizes.T)).T
-
-	# remove small clusters
-	print 'centers > 0.5:'
-	ridx = sizes >= 0.5
-	rcents = mcents[ridx,:]
-	rsizes = sizes[ridx]
-	#ridx_full = idx_full[ridx,:]
-
-	return rcents, rsizes
+	
+	# cutoff small clusters
+	rcents, rsizes = cutoff_cents(mcents, sizes, cutoff=cutoff)
+	
+	return rcents, edg, rsizes
 
 ###
-print '3D DATA'
-means = [(0.2,0.8,0.3),
+if __name__=='__main__':
+
+	print '3D DATA'
+	means = [(0.2,0.8,0.3),
          (0.6,0.5,0.9),
          (0.1,0.1,0.2)]
-data3 = gen_data(means, Nrows=NSAMPLES)
-x = data3[:,0]
-y = data3[:,1]
-z = data3[:,2]
+	data3 = gen_data(means, Nrows=NSAMPLES)
+	x = data3[:,0]
+	y = data3[:,1]
+	z = data3[:,2]
 
-fig = plt.figure()
-ax = fig.add_subplot(111, projection='3d')
-ax.scatter(x,y,z, s=1, alpha=0.3)
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
-pmeans = np.array(means)
-ax.scatter(pmeans[:,0],pmeans[:,1], pmeans[:,2], c='g',s=800, marker='v')
+	fig = plt.figure()
+	ax = fig.add_subplot(111, projection='3d')
+	ax.scatter(x,y,z, s=1, alpha=0.3)
+	ax.set_xlabel('X')
+	ax.set_ylabel('Y')
+	ax.set_zlabel('Z')
+	pmeans = np.array(means)
+	ax.scatter(pmeans[:,0],pmeans[:,1], pmeans[:,2], c='g',s=800, marker='v')
 
-mcents, edg, sizes = find_peaks(data3)
-ax.scatter(mcents[:,0], mcents[:,1], mcents[:,2], c='b',s=100,alpha=0.8)
+	rcents, edg, rsizes = find_peaks(data3)
+	print np.vstack((rcents.T ,rsizes.T)).T
+	ax.scatter(rcents[:,0], rcents[:,1], rcents[:,2], c='r',s=400)
 
-rcents, rsizes = cutoff_cents(mcents, sizes)
-print np.vstack((rcents.T ,rsizes.T)).T
-ax.scatter(rcents[:,0], rcents[:,1], rcents[:,2], c='r',s=400)
+	# todo: join large clusters using weighted means as center (to clear border cases)
 
+	plt.show(); plt.clf()
+	
+	# Image data
+	in_img = 'orig/pond.jpg'
+	out_img = 'orig/kueche.jpg'
+	#
+	# input image
+	img = Image.open(in_img)
+	img.thumbnail((256,256))
+	ary = np.asarray(img)/255.0
 
-# todo: join large clusters using weighted means as center (to clear border cases)
-
-#
-plt.show(); plt.clf()
+	ccents, cedg, csizes = find_peaks(ary, cutoff=0.01)
+	plt.imshow(ccents[None, ...], interpolation='none' )
+	plt.show(); plt.clf()
