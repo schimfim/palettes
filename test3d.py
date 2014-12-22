@@ -9,13 +9,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 #import npclust3d
-import nptest
+import locals3d
 import logging as log
 
-nptest.plot = False  
+#nptest.plot = False  
 
 thbsize = (256,256)
-hdsize = (1500,1500)
+hdsize = (1024,1024)
 
 # model
 class Model(object):
@@ -23,6 +23,14 @@ class Model(object):
 global md
 md = Model()
 
+# interface
+# todo: als "echtes" Interface bauen
+locals3d.verbose = False 
+def calcParams(a):
+	return locals3d.find_peaks(a)
+def applyFilter(a,p, controls):
+	ct = controls*5.5+0.5
+	return locals3d.applyCents(a,p, CT=ct)
 
 def uiimg_from_array(ary):
 	# ary in (0,1)
@@ -64,11 +72,11 @@ def add_filter(sender, img=None ):
 	uiimg = uiimg_from_array(ary)
 	# calc cube
 	#(md.cube, nc) = npclust3d.calcCube(ary, md.h_perc, md.nbrs, md.orig, md.contr)
-	(md.cube, nc) = nptest.calcCents(ary)
+	md.cube = calcParams(ary)
 	# update ui
 	img_view = v['theFilter']
 	img_view.image = uiimg
-	v['cents'].text = '%d' % nc
+	#v['cents'].text = '%d' % nc
 
 # apply filter
 @ui.in_background
@@ -79,19 +87,23 @@ def apply_filter():
 		return
 	v['activity'].start()
 	ary = md.orig_ary
-	rgb = nptest.applyCents(ary, md.cube, md.contr)
+	rgb = applyFilter(ary, md.cube, md.contr)
+	#rgb = nptest.applyCents(ary, md.cube, md.contr)
 	uiimg = uiimg_from_array(rgb)
 	img_view = v['theImage']
 	img_view.image = uiimg
 	v['activity'].stop()
 
 def apply_filter_hd():
-	pass 
+	ary = np.asarray(md.hd_img)/255.0
+	rgb = applyFilter(ary, md.cube, md.contr) * 255.0
+	img = Image.fromarray(rgb.astype(np.uint8))
+	return img
 
 def slider_action(sender):
 	global md
 	md.h_perc = v['histSlider'].value
-	md.contr = v['distSlider'].value * 4.5 + 0.5
+	md.contr = v['distSlider'].value
 	md.orig = v['dhSlider'].value
 	md.h_perc = 0.2
 	md.nbrs = 1
@@ -103,24 +115,27 @@ def slider_action(sender):
 	if not hasattr(md, 'orig_ary'):
 		print 'no image'
 		return
-	(md.cube, nc) = nptest.calcCents(md.filt_ary)
-	v['cents'].text = '%d' % nc
+	#(md.cube, nc) = nptest.calcCents(md.filt_ary)
+	md.cube = calcParams(md.filt_ary)
+	#v['cents'].text = '%d' % nc
 	
 	apply_filter()
 
 def switch_action(sender):
 	orig = v['origSwitch'].value
+	'''
 	if orig:
 		nptest.gain = 1.0
 	else:
 		nptest.gain = 0.0
 	nptest.lense = v['muSwitch'].value
+	'''
 	slider_action(None )
 
 @ui.in_background
 def save_action(sender):
 	global md
-	if md['hd_img'] is None:
+	if md.hd_img is None:
 		return
 	v['activity'].start()
 	img = apply_filter_hd()
