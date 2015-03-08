@@ -26,11 +26,19 @@ md = Model()
 # interface
 # todo: als "echtes" Interface bauen
 locals3d.verbose = False 
-def calcParams(a):
-	return locals3d.find_peaks(a)
+def calcParams(filt,img=None):
+	params = {}
+	params['filt'] = locals3d.find_peaks(filt)[0]
+	if img != None:
+		params['img'] = locals3d.find_peaks(img)
+	return params
 def applyFilter(a,p, controls):
-	ct = controls*5.5+0.5
-	return locals3d.applyCents(a,p, CT=ct)
+	ct = controls['mu0']
+	if 'img' in p:
+		pass
+	else: 
+		out = locals3d.fastApplyCents(a, p['filt'], mu0=ct, CT=3.0)
+	return out
 
 def uiimg_from_array(ary):
 	# ary in (0,1)
@@ -87,7 +95,7 @@ def apply_filter():
 		return
 	v['activity'].start()
 	ary = md.orig_ary
-	rgb = applyFilter(ary, md.cube, md.contr)
+	rgb = applyFilter(ary, md.cube, dict(mu0=md.contr))
 	#rgb = nptest.applyCents(ary, md.cube, md.contr)
 	uiimg = uiimg_from_array(rgb)
 	img_view = v['theImage']
@@ -96,14 +104,14 @@ def apply_filter():
 
 def apply_filter_hd():
 	ary = np.asarray(md.hd_img)/255.0
-	rgb = applyFilter(ary, md.cube, md.contr) * 255.0
+	rgb = applyFilter(ary, md.cube, dict(mu0=md.contr)) * 255.0
 	img = Image.fromarray(rgb.astype(np.uint8))
 	return img
 
 def slider_action(sender):
 	global md
 	md.h_perc = v['histSlider'].value
-	md.contr = v['distSlider'].value
+	md.contr = v['distSlider'].value**2
 	md.orig = v['dhSlider'].value
 	md.h_perc = 0.2
 	md.nbrs = 1
@@ -122,7 +130,7 @@ def slider_action(sender):
 	apply_filter()
 
 def switch_action(sender):
-	orig = v['origSwitch'].value
+	#orig = v['origSwitch'].value
 	'''
 	if orig:
 		nptest.gain = 1.0
